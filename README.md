@@ -1,0 +1,6 @@
+add the following properties inside agenticapp .env file
+
+GROQ_API_KEY=
+LANGCHAIN_API_KEY=
+TAVILY_API_KEY=
+HF_TOKEN=
