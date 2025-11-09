@@ -33,3 +33,8 @@ uvicorn==0.37.0
 wikipedia==1.4.0
 xxhash==3.6.0
 zstandard==0.25.0
+
+# yolo damage evaluator
+Pillow>=9.0.0
+ultralytics==8.3.176
+ultralytics-thop==2.0.15
