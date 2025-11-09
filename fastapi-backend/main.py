@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
+import os
 from agentapp.customerService import build_graph
 
 from agentapp.toolExecutionService import build_sopGraph
@@ -9,6 +11,9 @@ from agentapp.toolExecutionService import build_sopGraph
 graph = build_graph()
 sopGraph = build_sopGraph()
 app = FastAPI()
+
+# Mount static files
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # Add CORS middleware
 app.add_middleware(
@@ -25,6 +30,7 @@ class Issue(BaseModel):
     issueDescription: str
     issueTitle: str
     threadID: str
+    imageUrl: Optional[str] = None
 
 class LoginRequest(BaseModel):
     username: str
@@ -62,11 +68,11 @@ transaction_documents = [
     {"userID": "U006", "transactionID": "TXN006", "transactionStatus": "Pending", "documentType": "Payment Authorization", "documentID": "DOC12350", "createdDate": "2024-01-17", "lastUpdated": "2024-01-17"}
 ]
 
-issues_data = issues_data = issues_data = [
+issues_data = [
     {"userID": "U001", "userName": "John Doe", "issueDescription": "Payment status not reflected for policy 12345", "issueTitle": "Payment Issue", "threadID": "c10b26e3-9466-4c7a-9130-37f2ec18e558"},
     {"userID": "U002", "userName": "Jane Smith", "issueDescription": "Need some correction for second name from policy 12324", "issueTitle": "Update Second Name", "threadID": "cfb8dcf3-3f2f-4a47-bef5-3cfbc495fc1b"},
     {"userID": "U003", "userName": "Mike Johnson", "issueDescription": "Data export functionality broken", "issueTitle": "Export Bug", "threadID": "d4a93904-99df-4b20-9b34-06a01391c5a5"},
-    {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "Email notifications not working", "issueTitle": "Email Bug", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1"},
+    {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "My Car get crashed, Please help to get some estimations", "issueTitle": "Car Damage Estimation", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1", "imageUrl": "http://localhost:8000/images/accident-damage-car.jpg"},
     {"userID": "U005", "userName": "David Brown", "issueDescription": "Page loading very slowly", "issueTitle": "Performance Issue", "threadID": "4a33b890-3028-4204-8f42-1dc469ccf214"},
     {"userID": "U006", "userName": "Lisa Garcia", "issueDescription": "Cannot upload files", "issueTitle": "Upload Error", "threadID": "2ff2a7e7-6f05-4a6b-b406-d5a99f6d7f7d"},
     {"userID": "U007", "userName": "Robert Taylor", "issueDescription": "Search function returns no results", "issueTitle": "Search Bug", "threadID": "db44e64d-cb41-42a4-8b64-982046f06e8a"},

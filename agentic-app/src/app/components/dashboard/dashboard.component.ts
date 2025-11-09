@@ -25,16 +25,29 @@ import { IssueService } from '../../services/issue.service';
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let issue of issues">
-                  <td>{{ issue.userID }}</td>
-                  <td>{{ issue.userName }}</td>
-                  <td>{{ issue.issueDescription }}</td>
-                  <td>{{ issue.issueTitle }}</td>
-                  <td>
-                    <button class="action-btn view-btn" (click)="viewIssue(issue)">View</button>
-                    <button class="action-btn edit-btn" (click)="resolveIssue(issue)">Resolve</button>
-                  </td>
-                </tr>
+                <ng-container *ngFor="let issue of issues">
+                  <tr>
+                    <td>{{ issue.userID }}</td>
+                    <td>{{ issue.userName }}</td>
+                    <td>{{ issue.issueDescription }}</td>
+                    <td>{{ issue.issueTitle }}</td>
+                    <td>
+                      <button class="action-btn view-btn" (click)="viewIssue(issue)">View</button>
+                      <button class="action-btn edit-btn" (click)="resolveIssue(issue)">Resolve</button>
+                      <button *ngIf="issue.imageUrl" class="action-btn expand-btn" (click)="toggleExpand(issue.userID)">
+                        {{ isExpanded(issue.userID) ? '▼' : '▶' }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="issue.imageUrl && isExpanded(issue.userID)" class="expanded-row">
+                    <td colspan="5" class="image-cell">
+                      <div class="image-container">
+                        <img [src]="issue.imageUrl" alt="Issue Image" class="issue-image" />
+                        <button class="view-image-btn" (click)="viewImagePopup(issue.imageUrl)">🔍 View</button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
               </tbody>
             </table>
           </div>
@@ -66,6 +79,13 @@ import { IssueService } from '../../services/issue.service';
             <span>{{ selectedIssue.issueDescription }}</span>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <div class="image-popup-overlay" *ngIf="popupImageUrl" (click)="closeImagePopup()">
+      <div class="image-popup-content" (click)="$event.stopPropagation()">
+        <button class="popup-close-btn" (click)="closeImagePopup()">&times;</button>
+        <img [src]="popupImageUrl" alt="Issue Image" class="popup-image" />
       </div>
     </div>
   `,
@@ -226,11 +246,113 @@ import { IssueService } from '../../services/issue.service';
       flex: 1;
       color: #555;
     }
+    
+    .expand-btn {
+      background: #6c757d;
+      color: white;
+      padding: 0.3rem 0.6rem;
+      margin-right: 0.5rem;
+    }
+    
+    .expand-btn:hover {
+      background: #545b62;
+    }
+    
+    .expanded-row {
+      background: #f8f9fa;
+    }
+    
+    .image-cell {
+      padding: 1rem;
+      text-align: center;
+    }
+    
+    .image-container {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .issue-image {
+      max-width: 300px;
+      max-height: 200px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .view-image-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff6b35;
+      color: white;
+      border: 2px solid white;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .view-image-btn:hover {
+      background: #e55a2b;
+      transform: scale(1.05);
+      box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+    }
+    
+    .image-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    
+    .image-popup-content {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    
+    .popup-image {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    
+    .popup-close-btn {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .popup-close-btn:hover {
+      background: white;
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
   issues: Issue[] = [];
   selectedIssue: Issue | null = null;
+  expandedRows: Set<string> = new Set();
+  popupImageUrl: string | null = null;
 
   constructor(private issueService: IssueService, private router: Router, private http: HttpClient) {}
 
@@ -271,8 +393,32 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  toggleExpand(userID: string): void {
+    if (this.expandedRows.has(userID)) {
+      this.expandedRows.delete(userID);
+    } else {
+      this.expandedRows.add(userID);
+    }
+  }
+
+  isExpanded(userID: string): boolean {
+    return this.expandedRows.has(userID);
+  }
+
+  viewImagePopup(imageUrl: string): void {
+    this.popupImageUrl = imageUrl;
+  }
+
+  closeImagePopup(): void {
+    this.popupImageUrl = null;
+  }
+
   @HostListener('document:keydown.escape', ['$event'])
   onEscapeKey(event: KeyboardEvent): void {
-    this.closeModal();
+    if (this.popupImageUrl) {
+      this.closeImagePopup();
+    } else {
+      this.closeModal();
+    }
   }
 }

@@ -1,4 +1,4 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -59,9 +59,9 @@ class InsuranceIssueSOPVectorStore:
         existing_docs = self.vectorstore._collection.get(where={"category": "life_issue_sop"})
         if not existing_docs['ids']:
             self.vectorstore.add_documents(chunks)
-            print(f"✅ Added {len(chunks)} new chunks to vectorstore.")
+            print(f"[SUCCESS] Added {len(chunks)} new chunks to vectorstore.")
         else:
-            print("ℹ️ Vectorstore already has documents, skipping add.")
+            print("[INFO] Vectorstore already has documents, skipping add.")
 
     def debug_existing(self):
         """Print existing docs in vectorstore for debugging."""
