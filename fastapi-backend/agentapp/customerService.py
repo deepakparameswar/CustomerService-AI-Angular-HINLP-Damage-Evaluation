@@ -16,7 +16,7 @@ from langchain_chroma import Chroma
 from langchain_community.tools.tavily_search import TavilySearchResults
 
 
-from langchain import hub
+
 from langchain_core.output_parsers import StrOutputParser
 
 import random
@@ -32,7 +32,7 @@ from langchain_groq import ChatGroq
 
 from pydantic import BaseModel, Field
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 
 # Load environment variables from the .env file in the same directory as this script
@@ -236,7 +236,14 @@ retrieval_grader = grade_prompt | structured_llm_grader
 ## Generate
 
 # Prompt
-prompt = hub.pull("rlm/rag-prompt")
+from langchain_core.prompts import ChatPromptTemplate
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise."),
+        ("human", "Question: {question}\n\nContext: {context}\n\nAnswer:")
+    ]
+)
 
 # LLM
 llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0)
