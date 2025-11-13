@@ -48,7 +48,7 @@ if groq_api_key:
 else:
     raise ValueError("GROQ_API_KEY environment variable is not set")
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 # Schema for structured output to use as routing logic
 class Route(BaseModel):
@@ -183,7 +183,7 @@ class RouteQuery(BaseModel):
     )
 
 # LLM with function call
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 structured_llm_router = llm.with_structured_output(RouteQuery)
 
 # Prompt
@@ -214,7 +214,7 @@ class GradeDocuments(BaseModel):
 
 
 ## LLM with function call
-grader_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+grader_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 structured_llm_grader = grader_llm.with_structured_output(GradeDocuments)
 
 # Prompt
@@ -240,13 +240,13 @@ from langchain_core.prompts import ChatPromptTemplate
 
 prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise."),
+        ("system", "You are an assistant for question-answering tasks. Use ONLY the retrieved context to answer the question. Do not add any information beyond what is provided in the context. If the context doesn't contain the answer, say 'I don't have enough information to answer this question.' Keep the answer concise and within three sentences."),
         ("human", "Question: {question}\n\nContext: {context}\n\nAnswer:")
     ]
 )
 
 # LLM
-llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 # Post-processing
 # def format_docs(doc_txt):
@@ -268,7 +268,7 @@ class GradeHallucination(BaseModel):
     )
 
 # LLM with function call
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 structured_llm_grader = llm.with_structured_output(GradeHallucination)
 
 # Prompt
@@ -296,7 +296,7 @@ class GradeAnswer(BaseModel):
     )
 
 # LLM with function call
-answer_prompt_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+answer_prompt_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 structured_llm_grader = answer_prompt_llm.with_structured_output(GradeAnswer)
 
 # Prompt
@@ -315,7 +315,7 @@ answer_grader = answer_prompt | structured_llm_grader
 ## Question Re-writer
 
 # LLM
-question_rewriter_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+question_rewriter_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 # prompt
 system = """You a question re-writer that converts an input question to a better version that is optimized \n

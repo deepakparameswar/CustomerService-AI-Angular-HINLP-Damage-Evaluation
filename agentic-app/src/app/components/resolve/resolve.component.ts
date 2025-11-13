@@ -40,7 +40,10 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                     </div>
                     <div class="start-controls">
                       <p class="workflow-description">Ready to execute Standard Operating Procedure for issue resolution.</p>
-                      <button class="btn-start" (click)="startExecution()">▶ Start Execution</button>
+                      <button class="btn-start" (click)="startExecution()" [disabled]="isExecuting">
+                        <span *ngIf="!isExecuting">▶ Start Execution</span>
+                        <span *ngIf="isExecuting">⏳ Executing...</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -91,7 +94,10 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                     <div class="response-text" *ngIf="apiResponse.response?.generation">
                       {{ apiResponse.response.generation }}
                     </div>
-                    <div class="response-fallback" *ngIf="!apiResponse.response?.generation">
+                    <div class="response-images" *ngIf="getAnnotatedImages().length > 0">
+                      <img *ngFor="let img of getAnnotatedImages()" [src]="img" alt="Annotated Output" class="annotated-image" (click)="viewImagePopup(img)" />
+                    </div>
+                    <div class="response-fallback" *ngIf="!apiResponse.response?.generation && getAnnotatedImages().length === 0">
                       <pre>{{ apiResponse | json }}</pre>
                     </div>
                   </div>
@@ -109,6 +115,13 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
         </div>
       </div>
     </div>
+    
+    <div class="image-popup-overlay" *ngIf="popupImageUrl" (click)="closeImagePopup()">
+      <div class="image-popup-content" (click)="$event.stopPropagation()">
+        <button class="popup-close-btn" (click)="closeImagePopup()">&times;</button>
+        <img [src]="popupImageUrl" alt="Annotated Image" class="popup-image" />
+      </div>
+    </div>
   `,
   styles: [`
     .resolve-page {
@@ -120,21 +133,28 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       display: flex;
       gap: 2rem;
       height: 100%;
+      align-items: flex-start;
     }
     
     .left-section {
       flex: 0 0 16.667%;
+      min-width: 0;
     }
     
     .right-section {
       flex: 1;
+      min-width: 0;
     }
     
     .card {
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      height: 100%;
+      height: fit-content;
+      max-height: calc(100vh - 200px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     
     .card h3 {
@@ -146,8 +166,9 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
     
     .card-content {
       padding: 1.5rem;
-      max-height: calc(100vh - 200px);
       overflow-y: auto;
+      overflow-x: hidden;
+      flex: 1;
     }
     
     .card-content p {
@@ -236,6 +257,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
     
     .sop-section {
       margin-bottom: 2rem;
+      overflow: hidden;
     }
     
     .sop-section h4 {
@@ -249,6 +271,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      overflow: hidden;
     }
     
     .sop-step {
@@ -256,6 +279,8 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       border-radius: 8px;
       padding: 1rem;
       transition: all 0.2s;
+      max-width: 100%;
+      overflow: hidden;
     }
     
     .sop-step.completed {
@@ -278,6 +303,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       align-items: center;
       gap: 1rem;
       margin-bottom: 0.5rem;
+      flex-wrap: wrap;
     }
     
     .step-number {
@@ -309,6 +335,8 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       color: #666;
       font-size: 0.875rem;
       margin-bottom: 0.5rem;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     
     .approval-actions {
@@ -521,6 +549,13 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       box-shadow: 0 4px 8px rgba(0,123,255,0.3);
     }
     
+    .btn-start:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+    
     .execution-content {
       animation: fadeIn 0.3s ease-in;
     }
@@ -553,6 +588,73 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       overflow-x: auto;
       margin: 0;
     }
+    
+    .response-images {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .annotated-image {
+      max-width: 300px;
+      height: auto;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      border: 2px solid #dee2e6;
+    }
+    
+    .annotated-image:hover {
+      transform: scale(1.02);
+      border-color: #007bff;
+    }
+    
+    .image-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    
+    .image-popup-content {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+    
+    .popup-image {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    
+    .popup-close-btn {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .popup-close-btn:hover {
+      background: white;
+    }
   `]
 })
 export class ResolveComponent implements OnInit {
@@ -560,6 +662,8 @@ export class ResolveComponent implements OnInit {
   apiResponse: any = null;
   response: any = null;
   sopMap:Map<string, [any]> = new Map<string, [any]>();
+  isExecuting: boolean = false;
+  popupImageUrl: string | null = null;
 
   constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {}
 
@@ -571,7 +675,8 @@ export class ResolveComponent implements OnInit {
           userName: params['userName'],
           issueTitle: params['issueTitle'],
           issueDescription: params['issueDescription'],
-          threadID: params['threadID']
+          threadID: params['threadID'],
+          imageURL: params['imageURL']
         };
         if (params['response']) {
           this.response = JSON.parse(params['response']);
@@ -588,13 +693,16 @@ export class ResolveComponent implements OnInit {
     }
 
     let threadID = this.selectedIssue.threadID;
+    this.isExecuting = true;
     
     this.http.post('http://localhost:8000/process-sopquery', {
       operating_procedure: this.response.response.generation,
       userID: this.selectedIssue.userID,
+      imageURL: this.selectedIssue?.imageURL,
       threadID: threadID
     }).subscribe({
       next: (response: any) => {
+        this.isExecuting = false;
         console.log('API Response:', response);
         this.apiResponse = response.response;
         this.apiResponse["status"] = "pending_approval";
@@ -602,6 +710,7 @@ export class ResolveComponent implements OnInit {
         console.log('SOP Map:', this.sopMap);
       },
       error: (error) => {
+        this.isExecuting = false;
         console.error('API Error:', error);
       }
     });
@@ -634,10 +743,12 @@ export class ResolveComponent implements OnInit {
       next: (response: any) => {
         console.log('API Response:', response);
         this.apiResponse = response;
-        this.apiResponse["status"] = "pending_approval";
-        this.apiResponse["requires_approval"] = true;
-        executionObjs?.push(this.apiResponse)
         entry.status = 'completed';
+        if(response.hasNextTool) {
+          this.apiResponse["status"] = "pending_approval";
+          this.apiResponse["requires_approval"] = true;
+          executionObjs?.push(this.apiResponse)
+        }
         console.log('SOP Map After Approval:', this.sopMap);
       },
       error: (error) => {
@@ -674,6 +785,33 @@ export class ResolveComponent implements OnInit {
       console.log("getToolsDetails items >>>>>> ",items)
     }
     return items;
+  }
+
+  getAnnotatedImages(): string[] {
+    if (this.apiResponse?.previous_tool_res?.content) {
+      try {
+        const content = JSON.parse(this.apiResponse.previous_tool_res.content);
+        if (content.result?.analysis) {
+          return content.result.analysis
+            .filter((item: any) => item.annotated_output)
+            .map((item: any) => {
+              const imagePath = item.annotated_output.replace(/\\/g, '/');
+              return `http://localhost:8000/${imagePath}`;
+            });
+        }
+      } catch (e) {
+        console.error('Error parsing content:', e);
+      }
+    }
+    return [];
+  }
+
+  viewImagePopup(imageUrl: string): void {
+    this.popupImageUrl = imageUrl;
+  }
+
+  closeImagePopup(): void {
+    this.popupImageUrl = null;
   }
 
 }

@@ -4,5 +4,5 @@ export interface Issue {
   issueDescription: string;
   issueTitle: string;
   threadID: string;
-  imageUrl?: string;
+  imageURL?: string;
 }

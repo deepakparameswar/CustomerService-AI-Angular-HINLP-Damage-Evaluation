@@ -14,13 +14,14 @@ from langgraph.prebuilt import tools_condition, ToolNode
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 from langchain_core.tools import tool
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
-from langchain.schema import AgentAction
+from langchain_core.agents import AgentAction
 from typing import Dict, List, Optional, Any
 
 import uuid
 
+from damageEvaluator.image_analyzer import analyze_image
 
 # Load environment variables from the .env file in the same directory as this script
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -61,6 +62,7 @@ Action: Choose one action (tool) to execute next — must be one of [{tool_names
 {tools}
 
 userID: {userID}
+imageURL: {imageURL}                                          
 previous tool response: {toolRes}
 
 ---
@@ -70,6 +72,7 @@ Important:
 - Never skip a tool required by the SOP.
 - Never make assumptions or create steps outside the SOP.
 - Decide whether to call a tool only if it’s required by the SOP and appropriate based on the last tool’s response.
+- REMEMBER: Also please dont call any tools those are not specified in the SOP, only execute the tools based on the given SOP: {operating_procedure}. exit after all tool exections completed
 """)
 
 
@@ -78,6 +81,7 @@ class GraphState(TypedDict):
    messages: Annotated[Optional[List[any]], add_messages]
    toolRes: Optional[List[any]]
    userID: str
+   imageURL: Optional[List[str]]
 
 groq_api_key = os.getenv("GROQ_API_KEY")
 if groq_api_key:
@@ -158,13 +162,45 @@ def updateUserdetails(user_id: str) -> dict:
         "status": "SUCCESS",
     }
 
+@tool
+def estimateVehicleDamage(user_id: str, imageURL: str) -> dict:
+    """Estimate vehicle damage for a user ID"""
+    if not imageURL:
+        return {
+            "user_id": user_id,
+            "status": "ERROR",
+            "error": "No image URL provided"
+        }
+    
+    # Convert URL to local file path
+    # e.g., http://localhost:8000/images/accident-damage-car.jpg -> images/accident-damage-car.jpg
+    if imageURL.startswith("http"):
+        image_path = imageURL.split("/images/")[-1]
+        image_path = os.path.join("images", image_path)
+    else:
+        image_path = imageURL
+
+    print(f"estimateVehicleDamage tool image_path >>>>>>> :", image_path)
+
+    result = analyze_image(session_id="session_001", images=[image_path], description="test")
+
+    print(f"tool estimateVehicleDamage result: >>>>>>>>> ",result)
+
+    return {
+        "user_id": user_id,
+        "imageURL": imageURL,
+        "status": "SUCCESS",
+        "result": result
+    }
+
 
 # Create LangChain Agent
 tools = [
     get_payment_status,
     create_support_ticket,
     check_bank_statement,
-    updateUserdetails
+    updateUserdetails,
+    estimateVehicleDamage
 ]
 
 llm_with_tools = llm.bind_tools(tools)
@@ -179,6 +215,7 @@ def assistant(state: GraphState):
         tool_names=tool_names,
         operating_procedure=state["operating_procedure"],
         userID= state["userID"],
+        imageURL= state.get("imageURL", ""),
         toolRes= state.get("toolRes", [])
     )
 

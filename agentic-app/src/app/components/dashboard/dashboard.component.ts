@@ -33,17 +33,20 @@ import { IssueService } from '../../services/issue.service';
                     <td>{{ issue.issueTitle }}</td>
                     <td>
                       <button class="action-btn view-btn" (click)="viewIssue(issue)">View</button>
-                      <button class="action-btn edit-btn" (click)="resolveIssue(issue)">Resolve</button>
-                      <button *ngIf="issue.imageUrl" class="action-btn expand-btn" (click)="toggleExpand(issue.userID)">
+                      <button class="action-btn edit-btn" (click)="resolveIssue(issue)" [disabled]="isResolving(issue.userID)">
+                        <span *ngIf="!isResolving(issue.userID)">Resolve</span>
+                        <span *ngIf="isResolving(issue.userID)">⏳ Loading...</span>
+                      </button>
+                      <button *ngIf="issue.imageURL" class="action-btn expand-btn" (click)="toggleExpand(issue.userID)">
                         {{ isExpanded(issue.userID) ? '▼' : '▶' }}
                       </button>
                     </td>
                   </tr>
-                  <tr *ngIf="issue.imageUrl && isExpanded(issue.userID)" class="expanded-row">
+                  <tr *ngIf="issue.imageURL && isExpanded(issue.userID)" class="expanded-row">
                     <td colspan="5" class="image-cell">
                       <div class="image-container">
-                        <img [src]="issue.imageUrl" alt="Issue Image" class="issue-image" />
-                        <button class="view-image-btn" (click)="viewImagePopup(issue.imageUrl)">🔍 View</button>
+                        <img [src]="issue.imageURL" alt="Issue Image" class="issue-image" />
+                        <button class="view-image-btn" (click)="viewImagePopup(issue.imageURL)">🔍 View</button>
                       </div>
                     </td>
                   </tr>
@@ -178,6 +181,12 @@ import { IssueService } from '../../services/issue.service';
     
     .edit-btn:hover {
       background: #1e7e34;
+    }
+    
+    .edit-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
     
     .modal-overlay {
@@ -353,6 +362,7 @@ export class DashboardComponent implements OnInit {
   selectedIssue: Issue | null = null;
   expandedRows: Set<string> = new Set();
   popupImageUrl: string | null = null;
+  resolvingIssues: Set<string> = new Set();
 
   constructor(private issueService: IssueService, private router: Router, private http: HttpClient) {}
 
@@ -372,10 +382,12 @@ export class DashboardComponent implements OnInit {
   }
 
   resolveIssue(issue: Issue): void {
+    this.resolvingIssues.add(issue.userID);
     this.http.post('http://localhost:8000/start-execution', {
       issueDescription: issue.issueDescription
     }).subscribe({
       next: (response) => {
+        this.resolvingIssues.delete(issue.userID);
         this.router.navigate(['/resolve'], {
           queryParams: {
             userID: issue.userID,
@@ -383,14 +395,20 @@ export class DashboardComponent implements OnInit {
             issueTitle: issue.issueTitle,
             issueDescription: issue.issueDescription,
             response: JSON.stringify(response),
-            threadID: issue.threadID
+            threadID: issue.threadID,
+            imageURL: issue?.imageURL
           }
         });
       },
       error: (error) => {
+        this.resolvingIssues.delete(issue.userID);
         console.error('API Error:', error);
       }
     });
+  }
+
+  isResolving(userID: string): boolean {
+    return this.resolvingIssues.has(userID);
   }
 
   toggleExpand(userID: string): void {

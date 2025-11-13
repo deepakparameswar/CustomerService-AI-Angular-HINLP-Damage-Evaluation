@@ -2,9 +2,10 @@
 import os
 from ultralytics import YOLO
 import cv2
+import urllib.request
 
 # Load YOLO model once globally
-MODEL_PATH = "models/best.pt"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "best.pt")
 model = YOLO(MODEL_PATH)
 
 # Ensure output folder exists
@@ -54,9 +55,11 @@ def analyze_image(session_id: str, images: list, description: str):
     Runs YOLO detection on multiple images.
     Returns structured JSON with paths + detected damages.
     """
+    print(f"images: >>>>>>>>> {images}")
     session_id = session_id or "session-less"
     results = []
     for img_path in images:
+        print(f"img_path: >>>>>>>> ",img_path)
         if not os.path.exists(img_path):
             results.append({"image": img_path, "error": "file not found"})
             continue
