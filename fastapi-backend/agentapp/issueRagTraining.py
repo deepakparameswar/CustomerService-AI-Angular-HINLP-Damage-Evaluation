@@ -5,7 +5,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
 class InsuranceIssueSOPVectorStore:
-    def __init__(self, pdf_path: str, persist_directory: str = "sample_db"):
+    def __init__(self, pdf_path: str, persist_directory: str = "../sample_db"):
         self.pdf_path = pdf_path
         self.persist_directory = persist_directory
 
