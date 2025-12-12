@@ -17,8 +17,8 @@ import { IssueService } from '../../services/issue.service';
             <table class="issues-table">
               <thead>
                 <tr>
-                  <th>User ID</th>
-                  <th>User Name</th>
+                  <th>Party Number</th>
+                  <th>Party Name</th>
                   <th>Issue Description</th>
                   <th>Issue Title</th>
                   <th>Action</th>

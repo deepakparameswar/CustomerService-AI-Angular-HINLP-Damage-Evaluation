@@ -68,8 +68,8 @@ class IssueState(BaseModel):
 ## Augment the LLM with schema for structured output
 router = llm.with_structured_output(Route)
 
-## 
-analyser_llm = llm.with_structured_output(IssueState)
+## Use JSON mode for analyser_llm to avoid tool calling issues
+analyser_llm = llm
 
 class GraphState(TypedDict):
     """
@@ -130,6 +130,9 @@ def issue_analyser(state):
         - If neither is null, missingProperties must be an empty array [].
         5. Return the result strictly in JSON format with keys:
         ["validIssue", "missingProperties", "issueProblemDesc", "policyNumber"].
+        
+        Example output:
+        {{"validIssue": true, "missingProperties": [], "issueProblemDesc": "Car crashed", "policyNumber": "123456"}}
         """
     
     result = analyser_llm.invoke([
@@ -139,8 +142,42 @@ def issue_analyser(state):
             HumanMessage(content=state["question"])
     ])
     
-    print(f"issue_analyser >>>>>>>>>>>. : {result}")
-    return {"validIssue": result.validIssue, "missingProperties": result.missingProperties, "issueProblemDesc": result.issueProblemDesc, "policyNumber": result.policyNumber}
+    print(f"issue_analyser raw result >>>>>>>>>>>. : {result}")
+    
+    # Parse JSON from the response
+    try:
+        import json
+        # Extract JSON from the response content
+        response_content = result.content if hasattr(result, 'content') else str(result)
+        
+        # Try to find JSON in the response
+        start_idx = response_content.find('{')
+        end_idx = response_content.rfind('}') + 1
+        
+        if start_idx != -1 and end_idx != -1:
+            json_str = response_content[start_idx:end_idx]
+            parsed_result = json.loads(json_str)
+        else:
+            # Fallback parsing
+            parsed_result = json.loads(response_content)
+            
+        print(f"issue_analyser parsed result >>>>>>>>>>>. : {parsed_result}")
+        
+        return {
+            "validIssue": parsed_result.get("validIssue", False), 
+            "missingProperties": parsed_result.get("missingProperties", []), 
+            "issueProblemDesc": parsed_result.get("issueProblemDesc"), 
+            "policyNumber": parsed_result.get("policyNumber")
+        }
+    except Exception as e:
+        print(f"Error parsing JSON response: {e}")
+        # Fallback response
+        return {
+            "validIssue": False, 
+            "missingProperties": ["policyNumber", "issueProblemDesc"], 
+            "issueProblemDesc": None, 
+            "policyNumber": None
+        }
     
 
 # conditional edge function(also we can call as condition function) to route to the appropriate node
