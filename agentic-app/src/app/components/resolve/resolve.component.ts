@@ -17,9 +17,8 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
             <div class="card">
               <h3>Issue Details</h3>
               <div class="card-content">
-                <p>User ID: {{ selectedIssue?.userID || 'N/A' }}</p>
-                <p>User Name: {{ selectedIssue?.userName || 'N/A' }}</p>
-                <p>Issue Title: {{ selectedIssue?.issueTitle || 'N/A' }}</p>
+                <p>Party Number: {{ selectedIssue?.userID || 'N/A' }}</p>
+                <p>Party Name: {{ selectedIssue?.userName || 'N/A' }}</p>
                 <p>Issue Description: {{ selectedIssue?.issueDescription || 'N/A' }}</p>
                 <p>Status: In Progress</p>
               </div>
@@ -35,7 +34,10 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                     <div class="sop-procedures">
                       <h4>SOP Procedures</h4>
                       <div class="procedure-description">
-                        <p>{{response.response.generation}}</p>
+                        <ol *ngIf="parseSopProcedures(response.response.generation).length > 0">
+                          <li *ngFor="let step of parseSopProcedures(response.response.generation)">{{step}}</li>
+                        </ol>
+                        <p *ngIf="parseSopProcedures(response.response.generation).length === 0">{{response.response.generation}}</p>
                       </div>
                     </div>
                     <div class="start-controls">
@@ -77,9 +79,10 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                 <div class="agent-info">
                   <h4>Agent Execution Details</h4>
                   <div class="agent-details">
-                    <p><strong>Assigned Agent:</strong> AI Agent Alpha-7</p>
-                    <p><strong>Execution Time:</strong> 2 minutes 34 seconds</p>
-                    <p><strong>Confidence Score:</strong> 94%</p>
+                    <p><strong>Model Provider:</strong> {{ response_metadata.model_provider }}</p>
+                    <p><strong>Assigned Model:</strong> {{ response_metadata.model_name }}</p>
+                    <p><strong>Execution Time:</strong> {{ formatExecutionTime(response_metadata.token_usage.total_time) }}</p>
+                    <p><strong>Finish Reason:</strong> {{ response_metadata.finish_reason }}</p>
                   </div>
                 </div>
                 
@@ -94,8 +97,32 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                     <div class="response-text" *ngIf="apiResponse.response?.generation">
                       {{ apiResponse.response.generation }}
                     </div>
-                    <div class="response-images" *ngIf="getAnnotatedImages().length > 0">
-                      <img *ngFor="let img of getAnnotatedImages()" [src]="img" alt="Annotated Output" class="annotated-image" (click)="viewImagePopup(img)" />
+                    <div class="damage-analysis-container" *ngIf="getAnnotatedImages().length > 0">
+                      <div class="damage-image-section">
+                        <img *ngFor="let img of getAnnotatedImages()" [src]="img" alt="Annotated Output" class="annotated-image" (click)="viewImagePopup(img)" />
+                      </div>
+                      <div class="damage-details-section" *ngIf="getDamageDetails()">
+                        <h5>Damage Analysis</h5>
+                        <div class="damage-item" *ngFor="let analysis of getDamageDetails()">
+                          <div class="damage-list" *ngFor="let damage of analysis.damages">
+                            <div class="damage-row">
+                              <span class="damage-label">Type:</span>
+                              <span class="damage-value">{{ damage.label }}</span>
+                            </div>
+                            <div class="damage-row">
+                              <span class="damage-label">Severity:</span>
+                              <span class="damage-value severity-{{ damage.severity.toLowerCase() }}">{{ damage.severity }}</span>
+                            </div>
+                            <div class="damage-row">
+                              <span class="damage-label">Confidence:</span>
+                              <span class="damage-value">{{ (damage.confidence * 100).toFixed(1) }}%</span>
+                            </div>
+                          </div>
+                          <div class="damage-notes" *ngIf="analysis.notes">
+                            <strong>Notes:</strong> {{ analysis.notes }}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div class="response-fallback" *ngIf="!apiResponse.response?.generation && getAnnotatedImages().length === 0">
                       <pre>{{ apiResponse | json }}</pre>
@@ -133,28 +160,31 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       display: flex;
       gap: 2rem;
       height: 100%;
-      align-items: flex-start;
+      align-items: stretch;
     }
     
     .left-section {
       flex: 0 0 16.667%;
       min-width: 0;
+      display: flex;
     }
     
     .right-section {
       flex: 1;
       min-width: 0;
+      display: flex;
     }
     
     .card {
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      height: fit-content;
+      height: 100%;
       max-height: calc(100vh - 200px);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      width: 100%;
     }
     
     .card h3 {
@@ -398,9 +428,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
     }
     
     .workflow-actions {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
+      display: none;
     }
     
     .btn-success, .btn-danger, .btn-warning {
@@ -506,6 +534,18 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       font-size: 0.875rem;
     }
     
+    .procedure-description ol {
+      margin: 0;
+      padding-left: 1.5rem;
+      color: #555;
+      font-size: 0.875rem;
+    }
+    
+    .procedure-description ol li {
+      margin-bottom: 0.5rem;
+      line-height: 1.6;
+    }
+    
     .procedure-description code {
       background: #e9ecef;
       padding: 0.2rem 0.4rem;
@@ -589,14 +629,18 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       margin: 0;
     }
     
-    .response-images {
+    .damage-analysis-container {
       display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+    
+    .damage-image-section {
+      flex: 0 0 auto;
     }
     
     .annotated-image {
-      max-width: 300px;
+      max-width: 400px;
       height: auto;
       border-radius: 4px;
       cursor: pointer;
@@ -607,6 +651,78 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
     .annotated-image:hover {
       transform: scale(1.02);
       border-color: #007bff;
+    }
+    
+    .damage-details-section {
+      flex: 1;
+      background: white;
+      padding: 1rem;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    
+    .damage-details-section h5 {
+      margin: 0 0 1rem 0;
+      color: #333;
+      font-size: 1rem;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 0.5rem;
+    }
+    
+    .damage-item {
+      margin-bottom: 1rem;
+    }
+    
+    .damage-list {
+      background: #f8f9fa;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+    
+    .damage-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .damage-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .damage-label {
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .damage-value {
+      color: #333;
+      text-transform: capitalize;
+    }
+    
+    .severity-severe {
+      color: #dc3545;
+      font-weight: 600;
+    }
+    
+    .severity-moderate {
+      color: #ffc107;
+      font-weight: 600;
+    }
+    
+    .severity-minor {
+      color: #28a745;
+      font-weight: 600;
+    }
+    
+    .damage-notes {
+      font-size: 0.875rem;
+      color: #666;
+      padding: 0.5rem;
+      background: #e9ecef;
+      border-radius: 4px;
+      margin-top: 0.5rem;
     }
     
     .image-popup-overlay {
@@ -664,6 +780,7 @@ export class ResolveComponent implements OnInit {
   sopMap:Map<string, [any]> = new Map<string, [any]>();
   isExecuting: boolean = false;
   popupImageUrl: string | null = null;
+  response_metadata: any = null;
 
   constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {}
 
@@ -699,14 +816,17 @@ export class ResolveComponent implements OnInit {
       operating_procedure: this.response.response.generation,
       userID: this.selectedIssue.userID,
       imageURL: this.selectedIssue?.imageURL,
+      description: this.selectedIssue?.issueDescription,
       threadID: threadID
     }).subscribe({
       next: (response: any) => {
         this.isExecuting = false;
-        console.log('API Response:', response);
+        console.log('startExecution API Response:', response);
         this.apiResponse = response.response;
         this.apiResponse["status"] = "pending_approval";
         this.sopMap.set(threadID, [this.apiResponse]);
+        this.response_metadata = response.response_metadata;
+        console.log('actionStep response_metadata:', this.response_metadata);
         console.log('SOP Map:', this.sopMap);
       },
       error: (error) => {
@@ -741,7 +861,7 @@ export class ResolveComponent implements OnInit {
     }
     this.http.post('http://localhost:8000/executions/approve', body).subscribe({
       next: (response: any) => {
-        console.log('API Response:', response);
+        console.log('actionStep API Response:', response);
         this.apiResponse = response;
         entry.status = 'completed';
         if(response.hasNextTool) {
@@ -749,6 +869,8 @@ export class ResolveComponent implements OnInit {
           this.apiResponse["requires_approval"] = true;
           executionObjs?.push(this.apiResponse)
         }
+        this.response_metadata = response.response_metadata;
+        console.log('actionStep response_metadata:', this.response_metadata);
         console.log('SOP Map After Approval:', this.sopMap);
       },
       error: (error) => {
@@ -760,7 +882,7 @@ export class ResolveComponent implements OnInit {
   getPendingActions():void {
     this.http.get('http://localhost:8000/executions/pending').subscribe({
       next: (response: any) => {
-        console.log('API Response:', response);
+        console.log('getPendingActions API Response:', response);
         
       },
       error: (error) => {
@@ -791,13 +913,15 @@ export class ResolveComponent implements OnInit {
     if (this.apiResponse?.previous_tool_res?.content) {
       try {
         const content = JSON.parse(this.apiResponse.previous_tool_res.content);
-        if (content.result?.analysis) {
-          return content.result.analysis
+        if (content && content.result != "null") {
+          if(content.result?.analysis) {
+            return content.result.analysis
             .filter((item: any) => item.annotated_output)
             .map((item: any) => {
               const imagePath = item.annotated_output.replace(/\\/g, '/');
               return `http://localhost:8000/${imagePath}`;
             });
+          }
         }
       } catch (e) {
         console.error('Error parsing content:', e);
@@ -806,12 +930,41 @@ export class ResolveComponent implements OnInit {
     return [];
   }
 
+  getAnnoatedImageRes(): any {
+    if (this.apiResponse?.previous_tool_res?.content) {
+      return true;
+    }
+  }
+
   viewImagePopup(imageUrl: string): void {
     this.popupImageUrl = imageUrl;
   }
 
   closeImagePopup(): void {
     this.popupImageUrl = null;
+  }
+
+  parseSopProcedures(text: string): string[] {
+    if (!text) return [];
+    const lines = text.split(/\n/).filter(line => line.trim());
+    const hasNumbers = lines.some(line => /^\d+[\.\)]/.test(line.trim()));
+    return hasNumbers ? lines.map(line => line.replace(/^\d+[\.\)]\s*/, '').trim()).filter(line => line) : [];
+  }
+
+  formatExecutionTime(seconds: number): string {
+    return `${seconds.toFixed(2)} seconds`;
+  }
+
+  getDamageDetails(): any[] {
+    if (this.apiResponse?.previous_tool_res?.content) {
+      try {
+        const content = JSON.parse(this.apiResponse.previous_tool_res.content);
+        return content.result?.analysis || [];
+      } catch (e) {
+        console.error('Error parsing damage details:', e);
+      }
+    }
+    return [];
   }
 
 }

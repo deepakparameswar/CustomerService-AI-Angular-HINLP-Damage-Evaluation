@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Any
 import uuid
 
 from damageEvaluator.image_analyzer import analyze_image
+from damageEvaluator.verify_accident_clip import verify_claim_clip
 
 # Load environment variables from the .env file in the same directory as this script
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -46,6 +47,7 @@ Your goals:
 2. Use only the tools listed below. Do not call any tool that is not in the SOP.
 3. If this is the first execution (previous tool response is null), start from the first relevant step in the SOP.
 4. If the SOP step depends on the previous tool’s result, decide the next tool accordingly.
+5. If the SOP mention to STOP or END then dont initiate or call another tools.
 5. Always interrupt before executing a tool to ask for user approval.
 
 ---
@@ -62,8 +64,9 @@ Action: Choose one action (tool) to execute next — must be one of [{tool_names
 {tools}
 
 userID: {userID}
-imageURL: {imageURL}                                          
-previous tool response: {toolRes}
+imageURL: {imageURL}
+issueDescription: {description}                                      
+previous tool response: {toolRes}                                            
 
 ---
 
@@ -71,7 +74,9 @@ Important:
 - Execute one tool at a time — do not run multiple tools in a single step.
 - Never skip a tool required by the SOP.
 - Never make assumptions or create steps outside the SOP.
+- Dont call unwated tools or twise a tool unless its not explictily specified in the SOP.
 - Decide whether to call a tool only if it’s required by the SOP and appropriate based on the last tool’s response.
+- Also wait some time to comple the tool exection and get the response.
 - REMEMBER: Also please dont call any tools those are not specified in the SOP, only execute the tools based on the given SOP: {operating_procedure}. exit after all tool exections completed
 """)
 
@@ -81,6 +86,7 @@ class GraphState(TypedDict):
    messages: Annotated[Optional[List[any]], add_messages]
    toolRes: Optional[List[any]]
    userID: str
+   issueDescription: str
    imageURL: Optional[List[str]]
 
 groq_api_key = os.getenv("GROQ_API_KEY")
@@ -162,6 +168,39 @@ def updateUserdetails(user_id: str) -> dict:
         "status": "SUCCESS",
     }
 
+
+@tool
+def evaluateImageWithDescription(user_id: str, imageURL: str, description: str) -> dict:
+    """evaluate the vehicle image with description to check the image and description are matching"""
+
+    print(f"evaluateImageWithDescription description: >>>>>> ",description)
+    print(f"evaluateImageWithDescription imageURL: >>>>>> ", imageURL)
+
+    if not imageURL:
+        return {
+            "user_id": user_id,
+            "status": "ERROR",
+            "error": "No image URL provided"
+        }
+    
+    # Convert URL to local file path
+    # e.g., http://localhost:8000/images/accident-damage-car.jpg -> images/accident-damage-car.jpg
+    if imageURL.startswith("http"):
+        image_path = imageURL.split("/images/")[-1]
+        image_path = os.path.join("images", image_path)
+    else:
+        image_path = imageURL
+
+    result = verify_claim_clip(image_path, description)
+    print(f"tool verify_claim_clip result: >>>>>>>>> ", result)
+    
+    return {
+        "user_id": user_id,
+        "imageURL": imageURL,
+        "result": result
+    }
+
+
 @tool
 def estimateVehicleDamage(user_id: str, imageURL: str) -> dict:
     """Estimate vehicle damage for a user ID"""
@@ -182,7 +221,7 @@ def estimateVehicleDamage(user_id: str, imageURL: str) -> dict:
 
     print(f"estimateVehicleDamage tool image_path >>>>>>> :", image_path)
 
-    result = analyze_image(session_id="session_001", images=[image_path], description="test")
+    result = analyze_image(session_id="session_001", images=[image_path], description="damage evaluation")
 
     print(f"tool estimateVehicleDamage result: >>>>>>>>> ",result)
 
@@ -200,7 +239,8 @@ tools = [
     create_support_ticket,
     check_bank_statement,
     updateUserdetails,
-    estimateVehicleDamage
+    estimateVehicleDamage,
+    evaluateImageWithDescription
 ]
 
 llm_with_tools = llm.bind_tools(tools)
@@ -215,6 +255,7 @@ def assistant(state: GraphState):
         tool_names=tool_names,
         operating_procedure=state["operating_procedure"],
         userID= state["userID"],
+        description = state.get("issueDescription", ""),
         imageURL= state.get("imageURL", ""),
         toolRes= state.get("toolRes", [])
     )

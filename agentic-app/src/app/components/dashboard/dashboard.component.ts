@@ -17,10 +17,9 @@ import { IssueService } from '../../services/issue.service';
             <table class="issues-table">
               <thead>
                 <tr>
-                  <th>User ID</th>
-                  <th>User Name</th>
+                  <th>Party Number</th>
+                  <th>Party Name</th>
                   <th>Issue Description</th>
-                  <th>Issue Title</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -30,7 +29,6 @@ import { IssueService } from '../../services/issue.service';
                     <td>{{ issue.userID }}</td>
                     <td>{{ issue.userName }}</td>
                     <td>{{ issue.issueDescription }}</td>
-                    <td>{{ issue.issueTitle }}</td>
                     <td>
                       <button class="action-btn view-btn" (click)="viewIssue(issue)">View</button>
                       <button class="action-btn edit-btn" (click)="resolveIssue(issue)" [disabled]="isResolving(issue.userID)">
@@ -66,16 +64,12 @@ import { IssueService } from '../../services/issue.service';
         </div>
         <div class="modal-body">
           <div class="detail-row">
-            <label>User ID:</label>
+            <label>Party Number:</label>
             <span>{{ selectedIssue.userID }}</span>
           </div>
           <div class="detail-row">
-            <label>User Name:</label>
+            <label>Party Name:</label>
             <span>{{ selectedIssue.userName }}</span>
-          </div>
-          <div class="detail-row">
-            <label>Issue Title:</label>
-            <span>{{ selectedIssue.issueTitle }}</span>
           </div>
           <div class="detail-row">
             <label>Issue Description:</label>
