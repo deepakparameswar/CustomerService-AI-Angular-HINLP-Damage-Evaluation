@@ -68,6 +68,45 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                         <span class="step-status" *ngIf="entry.status=='completed'">✓ Completed</span>
                       </div>
                       <div class="step-details">Planning to call {{entry.tool_name | titleCaseFromUnderscore}} with arguments : {{entry.tool_arguments}}</div>
+                      <div class="tool-result-section" *ngIf="getToolResult(i)">
+                        <button class="result-toggle" (click)="toggleResult(i)">
+                          <span class="toggle-icon">{{ isResultExpanded(i) ? '▼' : '▶' }}</span>
+                          Tool Result
+                        </button>
+                        <div class="result-content" *ngIf="isResultExpanded(i)">
+                          <div class="result-with-image" *ngIf="getToolImages(i).length > 0 || getToolDamages(i).length > 0">
+                            <div class="result-image-section" *ngIf="getToolImages(i).length > 0">
+                              <img *ngFor="let img of getToolImages(i)" [src]="img" alt="Tool Result Image" class="result-image" (click)="viewImagePopup(img)" />
+                            </div>
+                            <div class="result-text-section" *ngIf="getToolDamages(i).length > 0">
+                              <h5>Damage Analysis</h5>
+                              <div class="damage-item" *ngFor="let analysis of getToolDamages(i)">
+                                <div class="damage-list" *ngFor="let damage of analysis.damages">
+                                  <div class="damage-row">
+                                    <span class="damage-label">Type:</span>
+                                    <span class="damage-value">{{ damage.label }}</span>
+                                  </div>
+                                  <div class="damage-row">
+                                    <span class="damage-label">Severity:</span>
+                                    <span class="damage-value severity-{{ damage.severity.toLowerCase() }}">{{ damage.severity }}</span>
+                                  </div>
+                                  <div class="damage-row">
+                                    <span class="damage-label">Confidence:</span>
+                                    <span class="damage-value">{{ (damage.confidence * 100).toFixed(1) }}%</span>
+                                  </div>
+                                </div>
+                                <div class="damage-notes" *ngIf="analysis.notes">
+                                  <strong>Notes:</strong> {{ analysis.notes }}
+                                </div>
+                              </div>
+                            </div>
+                            <div class="result-text-section" *ngIf="getToolDamages(i).length === 0">
+                              <pre>{{ getToolResult(i) }}</pre>
+                            </div>
+                          </div>
+                          <pre *ngIf="getToolImages(i).length === 0 && getToolDamages(i).length === 0">{{ getToolResult(i) }}</pre>
+                        </div>
+                      </div>
                       <div class="approval-actions" *ngIf="entry.status=='pending_approval'">
                         <button class="approve-btn" (click)="actionStep(entry, true)">✓ Approve</button>
                         <button class="reject-btn" (click)="actionStep(entry, false)">✗ Reject</button>
@@ -82,6 +121,9 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                     <p><strong>Model Provider:</strong> {{ response_metadata.model_provider }}</p>
                     <p><strong>Assigned Model:</strong> {{ response_metadata.model_name }}</p>
                     <p><strong>Execution Time:</strong> {{ formatExecutionTime(response_metadata.token_usage.total_time) }}</p>
+                    <p><strong>Prompt Tokens:</strong> {{ response_metadata.token_usage.prompt_tokens }}</p>
+                    <p><strong>Completion Tokens:</strong> {{ response_metadata.token_usage.completion_tokens }}</p>
+                    <p><strong>Total Consumed Tokens:</strong> {{ response_metadata.token_usage.total_tokens }}</p>
                     <p><strong>Finish Reason:</strong> {{ response_metadata.finish_reason }}</p>
                   </div>
                 </div>
@@ -367,6 +409,89 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       margin-bottom: 0.5rem;
       word-wrap: break-word;
       overflow-wrap: break-word;
+    }
+    
+    .tool-result-section {
+      margin-left: 46px;
+      margin-top: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .result-toggle {
+      background: #e9ecef;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s;
+      width: auto;
+    }
+    
+    .result-toggle:hover {
+      background: #dee2e6;
+    }
+    
+    .toggle-icon {
+      font-size: 0.75rem;
+      color: #007bff;
+    }
+    
+    .result-content {
+      margin-top: 0.5rem;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 0.75rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .result-content pre {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .result-with-image {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    
+    .result-image-section {
+      flex: 0 0 auto;
+    }
+    
+    .result-image {
+      max-width: 200px;
+      height: auto;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      border: 2px solid #dee2e6;
+    }
+    
+    .result-image:hover {
+      transform: scale(1.05);
+      border-color: #007bff;
+    }
+    
+    .result-text-section {
+      flex: 1;
+    }
+    
+    .result-text-section h5 {
+      margin: 0 0 1rem 0;
+      color: #333;
+      font-size: 1rem;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 0.5rem;
     }
     
     .approval-actions {
@@ -864,6 +989,7 @@ export class ResolveComponent implements OnInit {
         console.log('actionStep API Response:', response);
         this.apiResponse = response;
         entry.status = 'completed';
+        entry["tool_res"] = this.apiResponse?.previous_tool_res
         if(response.hasNextTool) {
           this.apiResponse["status"] = "pending_approval";
           this.apiResponse["requires_approval"] = true;
@@ -962,6 +1088,79 @@ export class ResolveComponent implements OnInit {
         return content.result?.analysis || [];
       } catch (e) {
         console.error('Error parsing damage details:', e);
+      }
+    }
+    return [];
+  }
+
+  expandedResults: Set<number> = new Set();
+
+  getToolResult(index: number): string | null {
+    const items = this.getToolsDetails();
+    if (!items || index >= items.length) return null;
+    
+    const entry = items[index];
+    if (entry?.tool_res?.content && entry.tool_res.content.trim()) {
+      try {
+        const content = JSON.parse(entry.tool_res.content);
+        console.log('Tool Result Content:', content);
+        if (content?.result && content.result !== 'null' && content.result !== '') {
+          return typeof content.result === 'string' ? content.result : JSON.stringify(content.result, null, 2);
+        }
+        return  JSON.stringify(content);
+      } catch (e) {
+        return entry.tool_res.content;
+      }
+    }
+    return null;
+  }
+
+  toggleResult(index: number): void {
+    if (this.expandedResults.has(index)) {
+      this.expandedResults.delete(index);
+    } else {
+      this.expandedResults.add(index);
+    }
+  }
+
+  isResultExpanded(index: number): boolean {
+    return this.expandedResults.has(index);
+  }
+
+  getToolImages(index: number): string[] {
+    const items = this.getToolsDetails();
+    if (!items || index >= items.length) return [];
+    
+    const entry = items[index];
+    if (entry?.tool_res?.content) {
+      try {
+        const content = JSON.parse(entry.tool_res.content);
+        if (content?.result?.analysis) {
+          return content.result.analysis
+            .filter((item: any) => item.annotated_output)
+            .map((item: any) => {
+              const imagePath = item.annotated_output.replace(/\\/g, '/');
+              return `http://localhost:8000/${imagePath}`;
+            });
+        }
+      } catch (e) {
+        console.error('Error parsing tool images:', e);
+      }
+    }
+    return [];
+  }
+
+  getToolDamages(index: number): any[] {
+    const items = this.getToolsDetails();
+    if (!items || index >= items.length) return [];
+    
+    const entry = items[index];
+    if (entry?.tool_res?.content) {
+      try {
+        const content = JSON.parse(entry.tool_res.content);
+        return content.result?.analysis || [];
+      } catch (e) {
+        console.error('Error parsing tool damages:', e);
       }
     }
     return [];
