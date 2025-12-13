@@ -11,7 +11,7 @@ import { HttpClient } from '@angular/common/http';
   template: `
     <div class="login-container">
       <div class="login-card">
-        <h2>Login to LIC Customer Service</h2>
+        <h2>Login to Gen Customer Service</h2>
         <form (ngSubmit)="onLogin()" #loginForm="ngForm">
           <div class="form-group">
             <label for="username">Username</label>

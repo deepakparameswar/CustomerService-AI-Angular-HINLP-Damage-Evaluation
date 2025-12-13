@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
     <header class="header">
       <div class="container">
         <div class="header-content">
-          <h1 class="app-name" (click)="goHome()">LIC Customer Service</h1>
+          <h1 class="app-name" (click)="goHome()">Gen Customer Service</h1>
           <div class="user-profile" (click)="toggleDropdown()" #userProfile>
             <div class="profile-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

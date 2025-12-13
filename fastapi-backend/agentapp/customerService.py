@@ -240,7 +240,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", "You are an assistant for question-answering tasks. Use ONLY the retrieved context to answer the question. Do not add any information beyond what is provided in the context. If the context doesn't contain the answer, say 'I don't have enough information to answer this question.' Keep the answer concise and within three sentences."),
+        ("system", "You are an assistant for question-answering tasks. Use ONLY the retrieved context to answer the question. Do not add any information beyond what is provided in the context. If the context doesn't contain the answer, say 'I don't have enough information to answer this question.' Keep the answer concise and within three sentences. if multy steps involved then try to order like 1, 2 etc.."),
         ("human", "Question: {question}\n\nContext: {context}\n\nAnswer:")
     ]
 )

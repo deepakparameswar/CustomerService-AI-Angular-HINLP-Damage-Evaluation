@@ -50,6 +50,7 @@ class sopQuery(BaseModel):
     userID: str
     threadID: str
     imageURL: Optional[str] = None
+    description: Optional[str] = None
 
 
 payment_status_data = [
@@ -74,7 +75,7 @@ issues_data = [
     {"userID": "U001", "userName": "John Doe", "issueDescription": "Payment status not reflected for policy 12345", "issueTitle": "Payment Issue", "threadID": "c10b26e3-9466-4c7a-9130-37f2ec18e558"},
     {"userID": "U002", "userName": "Jane Smith", "issueDescription": "Need some correction for second name from policy 12324", "issueTitle": "Update Second Name", "threadID": "cfb8dcf3-3f2f-4a47-bef5-3cfbc495fc1b"},
     {"userID": "U003", "userName": "Mike Johnson", "issueDescription": "Data export functionality broken", "issueTitle": "Export Bug", "threadID": "d4a93904-99df-4b20-9b34-06a01391c5a5"},
-    {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "My Car get crashed, Please help to get some estimations and the policy number is 671289", "issueTitle": "Car Damage Estimation", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1", "imageURL": "http://localhost:8000/images/accident-damage-car.jpg"},
+    {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "Car windows damage on accident, Please help to get some vehicle damage estimation for policy number is 671289", "issueTitle": "Car Damage Estimation", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1", "imageURL": "http://localhost:8000/images/accident-damage-car.jpg"},
     {"userID": "U005", "userName": "David Brown", "issueDescription": "Page loading very slowly", "issueTitle": "Performance Issue", "threadID": "4a33b890-3028-4204-8f42-1dc469ccf214"},
     {"userID": "U006", "userName": "Lisa Garcia", "issueDescription": "Cannot upload files", "issueTitle": "Upload Error", "threadID": "2ff2a7e7-6f05-4a6b-b406-d5a99f6d7f7d"},
     {"userID": "U007", "userName": "Robert Taylor", "issueDescription": "Search function returns no results", "issueTitle": "Search Bug", "threadID": "db44e64d-cb41-42a4-8b64-982046f06e8a"},
@@ -181,7 +182,7 @@ async def process_sopquery(request: sopQuery):
     print(f"SOP Execution started for sop: {request.operating_procedure}")
 
     thread = {"configurable": {"thread_id": request.threadID}}
-    query = {"operating_procedure": request.operating_procedure, "userID": request.userID, "imageURL": request.imageURL}
+    query = {"operating_procedure": request.operating_procedure, "userID": request.userID, "imageURL": request.imageURL, "issueDescription":request.description}
 
     response = sopGraph.invoke(query, thread)
 
@@ -194,6 +195,7 @@ async def process_sopquery(request: sopQuery):
 
     # Check for tool_calls
     tool_calls = latest_message.additional_kwargs.get("tool_calls", [])
+    response_metadata = latest_message.response_metadata
 
     toolRes = tool_calls[-1]
 
@@ -212,7 +214,7 @@ async def process_sopquery(request: sopQuery):
         print("No tool calls found.")
 
     
-    return {"status": "success", "message": "SOP execution started", "response": toolRes}
+    return {"status": "success", "message": "SOP execution started", "response": toolRes, "response_metadata": response_metadata}
 
 @app.post("/start-execution")
 async def start_execution(request: StartExecutionRequest):
@@ -260,14 +262,18 @@ async def approve_execution_endpoint(request: ApprovalRequest):
     print(f"response: >>>>>>  {response}")
 
     # Get messages list
-    latest_messages = response["messages"]
+    modelRes = response["messages"]
+    print("approve modelRes: ", modelRes)
 
     # Get the latest message (last one)
-    latest_message = latest_messages[-1]
-    print("Latest message:", latest_message)
+    latest_message = modelRes[-1]
+    print("approve Latest message:", latest_message)
 
     # Safely check for tool_calls
     tool_calls = latest_message.additional_kwargs.get("tool_calls", [])
+
+    response_metadata = latest_message.response_metadata
+    print("approve response_metadata: ", response_metadata)
 
     toolRes = {}
 
@@ -291,12 +297,14 @@ async def approve_execution_endpoint(request: ApprovalRequest):
         toolRes["tool_arguments"] = tool_arguments if tool_arguments else None
         toolRes["previous_tool_res"] = latest_tool_res if latest_tool_res else None
         toolRes["hasNextTool"] = True
+        toolRes["response_metadata"] = response_metadata
         
     else:
         #Tool reseponse
         latest_tool_res = response["toolRes"][-1] if response.get("toolRes") else {}
         toolRes["previous_tool_res"] = latest_tool_res if latest_tool_res else None
         toolRes["hasNextTool"] = False
+        toolRes["response_metadata"] = response_metadata
         print("No tool_calls found in the latest message.")
 
 
