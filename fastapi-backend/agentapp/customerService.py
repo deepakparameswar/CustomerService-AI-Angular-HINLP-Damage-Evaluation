@@ -221,7 +221,8 @@ structured_llm_grader = grader_llm.with_structured_output(GradeDocuments)
 system = """ You are a grader assessing relevance of a retrieved document to a user question. \n
             If the document contains keyword(s) or semantic meaning related to the user question, grade it as relevant. \n
             It does not need to be a stringent test. The goal is to filter out erroneous retrievals. \n
-            Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question."""
+            Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question.
+            IMPORTANT: look into the context of the document for the given question, if its best fit then with that conext then we can grade it as valid else not valid"""
 
 grade_prompt = ChatPromptTemplate.from_messages(
     [
