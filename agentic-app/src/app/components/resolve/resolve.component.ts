@@ -97,6 +97,8 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                                 </div>
                                 <div class="damage-notes" *ngIf="analysis.notes">
                                   <strong>Notes:</strong> {{ analysis.notes }}
+                                </div>
+                                <div class="damage-notes" *ngIf="analysis.matchMetrix">
                                   <strong>Match Metrix:</strong> {{ analysis.matchMetrix }}
                                 </div>
                               </div>

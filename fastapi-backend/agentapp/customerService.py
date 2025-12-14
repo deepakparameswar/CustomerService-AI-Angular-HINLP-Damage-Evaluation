@@ -214,7 +214,7 @@ class GradeDocuments(BaseModel):
 
 
 ## LLM with function call
-grader_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+grader_llm = ChatGroq(model="llama-3.3-70B-versatile", temperature=0)
 structured_llm_grader = grader_llm.with_structured_output(GradeDocuments)
 
 # Prompt
@@ -269,7 +269,7 @@ class GradeHallucination(BaseModel):
     )
 
 # LLM with function call
-llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+llm = ChatGroq(model="llama-3.3-70B-versatile", temperature=0)
 structured_llm_grader = llm.with_structured_output(GradeHallucination)
 
 # Prompt
