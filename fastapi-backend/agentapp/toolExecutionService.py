@@ -202,8 +202,14 @@ def evaluateImageWithDescription(user_id: str, imageURL: str, description: str) 
 
 
 @tool
-def estimateVehicleDamage(user_id: str, imageURL: str) -> dict:
-    """Estimate vehicle damage for a user ID"""
+def estimateVehicleDamage(user_id: str, imageURL: str, description: str) -> dict:
+    """Estimate vehicle damage for a user ID.
+    
+    Args:
+        user_id: The ID of the user.
+        imageURL: The URL or path of the vehicle image.
+        description: The description of the accident/damage claim to verify against the image.
+    """
     if not imageURL:
         return {
             "user_id": user_id,
@@ -220,8 +226,9 @@ def estimateVehicleDamage(user_id: str, imageURL: str) -> dict:
         image_path = imageURL
 
     print(f"estimateVehicleDamage tool image_path >>>>>>> :", image_path)
+    print(f"estimateVehicleDamage tool description >>>>>>> :", description)
 
-    result = analyze_image(session_id="session_001", images=[image_path], description="car accident with another car")
+    result = analyze_image(session_id="session_001", images=[image_path], description=description)
 
     print(f"tool estimateVehicleDamage result: >>>>>>>>> ",result)
 
