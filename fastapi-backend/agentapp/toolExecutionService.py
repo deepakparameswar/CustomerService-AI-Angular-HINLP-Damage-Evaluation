@@ -77,7 +77,7 @@ Important:
 - Dont call unwated tools or twise a tool unless its not explictily specified in the SOP.
 - Decide whether to call a tool only if it’s required by the SOP and appropriate based on the last tool’s response.
 - Also wait some time to comple the tool exection and get the response.
-- REMEMBER: Also please dont call any tools those are not specified in the SOP, only execute the tools based on the given SOP: {operating_procedure}. exit after all tool exections completed
+- REMEMBER AND VERY IMPORTANT: Also please dont call any tools those are not specified in the SOP, only execute the tools based on the given SOP: {operating_procedure}. exit after all tool exections completed
 """)
 
 
@@ -193,7 +193,7 @@ def evaluateImageWithDescription(user_id: str, imageURL: str, description: str) 
 
     result = verify_claim_clip(image_path, description)
     print(f"tool verify_claim_clip result: >>>>>>>>> ", result)
-    
+
     return {
         "user_id": user_id,
         "imageURL": imageURL,
@@ -221,7 +221,7 @@ def estimateVehicleDamage(user_id: str, imageURL: str) -> dict:
 
     print(f"estimateVehicleDamage tool image_path >>>>>>> :", image_path)
 
-    result = analyze_image(session_id="session_001", images=[image_path], description="damage evaluation")
+    result = analyze_image(session_id="session_001", images=[image_path], description="car accident with another car")
 
     print(f"tool estimateVehicleDamage result: >>>>>>>>> ",result)
 
@@ -282,7 +282,6 @@ def handle_tool_output(state):
         "toolRes": tool_messages,  # optional, for prompt reference
         "messages": messages
     }
-
 
 
 def build_sopGraph():

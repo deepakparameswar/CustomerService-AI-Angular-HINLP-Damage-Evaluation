@@ -273,8 +273,27 @@ llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 structured_llm_grader = llm.with_structured_output(GradeHallucination)
 
 # Prompt
-system = """You are a grader assessing whether an LLM generation is grounded in / supported by a set of retrieved facts. \n
-            Give a binary score 'yes' or 'no'. 'yes' means that the answer is grounded in / supported by the set of facts."""
+system = """
+You are a grounding validator for a retrieval-augmented generation system.
+
+Give a binary score: 'yes' or 'no'.
+
+Mark 'yes' if:
+- The response aligns with the intent, workflow, or purpose of the retrieved content.
+- The response correctly applies or explains the SOP steps, even if details are inferred.
+- The response stays within the same domain and does not invent new processes.
+
+Mark 'no' ONLY if:
+- The response clearly fabricates APIs, policies, or steps not present.
+- The response contradicts the retrieved workflow.
+- The response discusses a different problem or domain.
+
+Guidance:
+- Prefer 'yes' when the response reasonably follows from the retrieved facts.
+- Do not require verbatim matching.
+- Logical continuation is allowed.
+"""
+
 
 hallucination_prompt = ChatPromptTemplate.from_messages(
     [
@@ -301,8 +320,37 @@ answer_prompt_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 structured_llm_grader = answer_prompt_llm.with_structured_output(GradeAnswer)
 
 # Prompt
-system = """You are a grader assessing whether an answer addresses / resolves a question \n
-            Give a binary score 'yes' or 'no'. 'yes' means that the answer resolves the question."""
+system = """You are a grader evaluating whether the provided content is RELEVANT and ACCEPTABLE
+for resolving the user's issue.
+
+The system supports multiple predefined issues with SOP-based solutions, such as:
+- insurance payment status issues
+- updating policy holder details (name, address)
+- accident-related vehicle damage estimation
+
+Grading rules:
+
+1. Focus on USER INTENT, not exact wording.
+2. If the content matches the SAME ISSUE CATEGORY as the user question, it is relevant.
+3. Procedural answers, SOP steps, or API calls are VALID final answers.
+4. The content does NOT need to fully resolve the issue; providing correct NEXT STEPS is sufficient.
+5. Do NOT reject answers just because they are technical, short, or action-oriented.
+
+Answer YES if:
+- the content addresses the same problem domain as the user's question, AND
+- the steps or information would help progress or resolve the issue.
+
+Answer NO only if:
+- the content belongs to a completely different issue, OR
+- it provides no useful or actionable information.
+
+IMPORTANT:
+- SOP execution steps are terminal answers.
+- Do not expect explanations or summaries.
+- Do not penalize answers that rely on external APIs or tools.
+
+Return ONLY 'yes' or 'no'.
+"""
 
 answer_prompt = ChatPromptTemplate.from_messages(
     [
@@ -319,15 +367,21 @@ answer_grader = answer_prompt | structured_llm_grader
 question_rewriter_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 # prompt
-system = """You a question re-writer that converts an input question to a better version that is optimized \n
-            for vectorstore retrieval. Look at the input and try to reason about the underlying semantic intent / meaning."""
+system = """You are a question re-writer that converts an input question to a better version optimized for vectorstore retrieval.
+
+Your task:
+- Extract the core intent and key concepts from the question
+- Rephrase it to be more specific and focused
+- Use keywords that would match relevant documents
+- Keep it concise and clear
+- Return ONLY the improved question, nothing else"""
 
 re_write_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", system),
         (
             "human", 
-            "Here is the initial question: \n\n {question} \n Formulate an improved question. And only return the improved question"
+            "Original question: {question}\n\nImproved question:"
         )
     ]
 )
@@ -716,7 +770,8 @@ def build_graph():
         grade_generation_v_documents_and_answers,
         {
             "useful": END,
-            "notUseful": "transform_query"
+            "notUseful": "transform_query",
+            "notSupported": "transform_query"
         }
     )
 

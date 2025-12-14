@@ -1,0 +1,130 @@
+{
+    "dent": [
+        "structural frame damage",
+        "paint damage underneath",
+        "potential rust formation",
+        "internal panel damage",
+        "alignment issues"
+    ],
+    "scratch": [
+        "paint layer damage",
+        "primer exposure",
+        "potential rust formation",
+        "clear coat damage"
+    ],
+    "crack": [
+        "structural integrity compromise",
+        "water leakage risk",
+        "further crack propagation",
+        "complete part failure risk"
+    ],
+    "broken glass": [
+        "interior water damage",
+        "electrical system damage",
+        "safety system malfunction",
+        "sensor damage"
+    ],
+    "missing part": [
+        "exposed internal components",
+        "mounting bracket damage",
+        "wiring harness damage",
+        "adjacent part stress"
+    ],
+    "front bumper": [
+        "grille",
+        "headlight",
+        "fog light",
+        "parking sensors",
+        "radiator support",
+        "condenser",
+        "impact absorber",
+        "fender liner"
+    ],
+    "rear bumper": [
+        "taillight",
+        "trunk lid",
+        "parking sensors",
+        "exhaust tip",
+        "rear panel",
+        "impact absorber"
+    ],
+    "front door": [
+        "side mirror",
+        "window glass",
+        "door handle",
+        "hinges",
+        "pillar",
+        "rocker panel"
+    ],
+    "rear door": [
+        "window glass",
+        "door handle",
+        "hinges",
+        "pillar",
+        "rocker panel",
+        "quarter panel"
+    ],
+    "hood": [
+        "windshield",
+        "hinges",
+        "latch mechanism",
+        "engine cover",
+        "fender"
+    ],
+    "trunk": [
+        "rear windshield",
+        "hinges",
+        "latch mechanism",
+        "taillight",
+        "rear bumper"
+    ],
+    "headlight": [
+        "front bumper",
+        "fender",
+        "hood",
+        "radiator support"
+    ],
+    "taillight": [
+        "rear bumper",
+        "quarter panel",
+        "trunk lid"
+    ],
+    "fender": [
+        "headlight",
+        "front bumper",
+        "wheel",
+        "suspension components",
+        "door"
+    ],
+    "wheel": [
+        "tire",
+        "rim",
+        "suspension control arm",
+        "brake caliper",
+        "brake rotor",
+        "axle"
+    ],
+    "windshield": [
+        "roof",
+        "hood",
+        "dashboard",
+        "rain sensor",
+        "camera"
+    ],
+    "side mirror": [
+        "front door",
+        "window glass"
+    ],
+    "grille": [
+        "front bumper",
+        "radiator",
+        "condenser",
+        "hood"
+    ],
+    "roof": [
+        "windshield",
+        "rear windshield",
+        "sunroof",
+        "headliner"
+    ]
+}
