@@ -94,6 +94,12 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                                     <span class="damage-label">Confidence:</span>
                                     <span class="damage-value">{{ (damage.confidence * 100).toFixed(1) }}%</span>
                                   </div>
+                                  <div class="probable-damages" *ngIf="damage.probable_damages && damage.probable_damages.length > 0">
+                                    <span class="damage-label">Probable Hidden Damages:</span>
+                                    <ul class="probable-list">
+                                      <li *ngFor="let pd of damage.probable_damages">{{ pd }}</li>
+                                    </ul>
+                                  </div>
                                 </div>
                                 <div class="damage-notes" *ngIf="analysis.notes">
                                   <strong>Notes:</strong> {{ analysis.notes }}
@@ -162,6 +168,12 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                               <span class="damage-label">Confidence:</span>
                               <span class="damage-value">{{ (damage.confidence * 100).toFixed(1) }}%</span>
                             </div>
+                                  <div class="probable-damages" *ngIf="damage.probable_damages && damage.probable_damages.length > 0">
+                                    <span class="damage-label">Probable Hidden Damages:</span>
+                                    <ul class="probable-list">
+                                      <li *ngFor="let pd of damage.probable_damages">{{ pd }}</li>
+                                    </ul>
+                                  </div>
                           </div>
                           <div class="damage-notes" *ngIf="analysis.notes">
                             <strong>Notes:</strong> {{ analysis.notes }}
@@ -898,6 +910,22 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
     
     .popup-close-btn:hover {
       background: white;
+    }
+    .probable-damages {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed #dee2e6;
+    }
+
+    .probable-list {
+      margin: 0.25rem 0 0 0;
+      padding-left: 1.25rem;
+      font-size: 0.85rem;
+      color: #dc3545;
+    }
+
+    .probable-list li {
+      margin-bottom: 0.1rem;
     }
   `]
 })
