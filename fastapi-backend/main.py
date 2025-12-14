@@ -75,7 +75,7 @@ issues_data = [
     {"userID": "U001", "userName": "John Doe", "issueDescription": "Payment status not reflected for policy 12345", "issueTitle": "Payment Issue", "threadID": "c10b26e3-9466-4c7a-9130-37f2ec18e558"},
     {"userID": "U002", "userName": "Jane Smith", "issueDescription": "Need some correction for second name from policy 12324", "issueTitle": "Update Second Name", "threadID": "cfb8dcf3-3f2f-4a47-bef5-3cfbc495fc1b"},
     {"userID": "U003", "userName": "Mike Johnson", "issueDescription": "Data export functionality broken", "issueTitle": "Export Bug", "threadID": "d4a93904-99df-4b20-9b34-06a01391c5a5"},
-    {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "Car windows damage on accident, Please help to get some vehicle damage estimation for policy number is 671289", "issueTitle": "Car Damage Estimation", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1", "imageURL": "http://localhost:8000/images/accident-damage-car.jpg"},
+    {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "Car windows and side doors damages on accident, Please help to calculate accident vehicle damage estimation for policy number 671289", "issueTitle": "Car Damage Estimation", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1", "imageURL": "http://localhost:8000/images/accident-damage-car.jpg"},
     {"userID": "U005", "userName": "David Brown", "issueDescription": "Page loading very slowly", "issueTitle": "Performance Issue", "threadID": "4a33b890-3028-4204-8f42-1dc469ccf214"},
     {"userID": "U006", "userName": "Lisa Garcia", "issueDescription": "Cannot upload files", "issueTitle": "Upload Error", "threadID": "2ff2a7e7-6f05-4a6b-b406-d5a99f6d7f7d"},
     {"userID": "U007", "userName": "Robert Taylor", "issueDescription": "Search function returns no results", "issueTitle": "Search Bug", "threadID": "db44e64d-cb41-42a4-8b64-982046f06e8a"},
@@ -219,7 +219,9 @@ async def process_sopquery(request: sopQuery):
 @app.post("/start-execution")
 async def start_execution(request: StartExecutionRequest):
     print(f"SOP Execution started for issue: {request.issueDescription}")
-    response = graph.invoke({"question": request.issueDescription})
+    # Add recursion limit config to prevent infinite loops
+    config = {"recursion_limit": 50}
+    response = graph.invoke({"question": request.issueDescription}, config=config)
     print(f"SOP graph invocation response: {response}")
     return {"status": "success", "message": "SOP execution started", "response": response}
 

@@ -3,6 +3,7 @@ import os
 from ultralytics import YOLO
 import cv2
 import urllib.request
+from agentapp.llm_utils import callGroq
 
 # Load YOLO model once globally
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "best.pt")
@@ -58,6 +59,7 @@ def analyze_image(session_id: str, images: list, description: str):
     print(f"images: >>>>>>>>> {images}")
     session_id = session_id or "session-less"
     results = []
+    matchMetrix = None
     for img_path in images:
         print(f"img_path: >>>>>>>> ",img_path)
         if not os.path.exists(img_path):
@@ -65,11 +67,71 @@ def analyze_image(session_id: str, images: list, description: str):
             continue
 
         output_path, damage_info = detect_and_estimate(img_path)
+
+        # Load SOP
+        sop_path = os.path.join(os.path.dirname(__file__), "sop", "damage_inference.json")
+        damage_sop = {}
+        if os.path.exists(sop_path):
+            import json
+            with open(sop_path, "r") as f:
+                damage_sop = json.load(f)
+
+        if not damage_info:
+            damage_summary = "No visible damage detected."
+        else:
+            damage_summary_lines = []
+            for d in damage_info:
+                label = d['label'].lower()
+                
+                # Look up probable damages in SOP
+                probable_damages = damage_sop.get(label, [])
+                print(f"probable_damages for '{label}': >>>>>>>> ", probable_damages)
+                probable_info = ""
+                if probable_damages:
+                    probable_info = f"\n  -> Probable Hidden/Associated Damages: {', '.join(probable_damages)}"
+                
+                print(f"probable_info: >>>>>>>> ", probable_info)
+
+                damage_summary_lines.append(f"- {d['label']} ({d['severity']}, Confidence: {d['confidence']:.2f}){probable_info}")
+            damage_summary = "\n".join(damage_summary_lines)
+
+        print(f"\n[Visual Evidence Detected]:\n{damage_summary}")
+
+        # 2. Reasoning Step: Ask Llama 3.1
+        system_prompt = (
+            "You are an AI insurance adjuster. Your job is to compare the visual evidence "
+            "from a car accident photo with the driver's claim description.\n"
+            "Analyze if the detected damage supports the claim.\n"
+            "Be objective and concise. Start with 'MATCH', 'MISMATCH', or 'INCONCLUSIVE'."
+        )
+
+        user_content = (
+            f"Claim Description: \"{description}\"\n\n"
+            f"Visual Evidence from Image Analysis:\n{damage_summary}\n\n"
+            "Does the evidence support the claim? Explain your reasoning."
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content}
+        ]
+
+        try:
+            print("\n[Consulting Llama 3.1]...")
+            matchMetrix = callGroq(messages)
+
+            print(f"\n analyze_image [LLM Response]:\n{matchMetrix.content}")
+
+        except Exception as e:
+            return f"Error calling LLM: {e}"
+        # end
+
         results.append({
             "image": img_path,
             "annotated_output": output_path,
             "damages": damage_info,
-            "notes": description
+            "notes": description,
+            "matchMetrix": matchMetrix.content
         })
 
     return {"session_id": session_id, "analysis": results}

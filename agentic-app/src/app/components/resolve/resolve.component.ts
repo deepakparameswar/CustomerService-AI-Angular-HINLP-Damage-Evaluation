@@ -97,6 +97,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                                 </div>
                                 <div class="damage-notes" *ngIf="analysis.notes">
                                   <strong>Notes:</strong> {{ analysis.notes }}
+                                  <strong>Match Metrix:</strong> {{ analysis.matchMetrix }}
                                 </div>
                               </div>
                             </div>
@@ -1158,6 +1159,7 @@ export class ResolveComponent implements OnInit {
     if (entry?.tool_res?.content) {
       try {
         const content = JSON.parse(entry.tool_res.content);
+        console.log('getToolDamages Tool Damages Content:', content);
         return content.result?.analysis || [];
       } catch (e) {
         console.error('Error parsing tool damages:', e);
