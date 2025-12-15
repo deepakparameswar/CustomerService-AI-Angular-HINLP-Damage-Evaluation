@@ -114,7 +114,8 @@ def analyze_image(session_id: str, images: list, description: str):
             "You are an AI insurance adjuster. Your job is to compare the visual evidence "
             "from a car accident photo with the driver's claim description.\n"
             "Analyze if the detected damage supports the claim.\n"
-            "Be objective and concise. Start with 'MATCH', 'MISMATCH', or 'INCONCLUSIVE'."
+            "Be objective. Start with 'MATCH', 'MISMATCH', 'PARTIAL MATCH', or 'INCONCLUSIVE'.\n"
+            "CRITICAL: Use 'PARTIAL MATCH' if the evidence supports ANY part of the claim (e.g. valid door damage) even if other parts (e.g. windows) are not visible. Do NOT use MISMATCH if there is substantial overlap."
         )
 
         user_content = (
