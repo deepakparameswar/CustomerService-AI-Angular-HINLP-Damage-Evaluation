@@ -58,7 +58,7 @@ def verify_claim_clip(image_path, claim_description):
         confidence = probs[0][best_match_idx].item()
 
         result = f"Best match: '{best_match_label}' with confidence {confidence:.2f}"
-        
+        print(f"result >>>>>>>>>>>>>>>> {result}")        
         # Simple logic: if the first label (the claim) is the highest or has a high enough score
         if best_match_idx == 0:
              return f"MATCH: The image seems to support the claim. ({result})"

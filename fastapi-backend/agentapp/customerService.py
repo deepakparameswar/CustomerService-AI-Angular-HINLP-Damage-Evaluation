@@ -184,7 +184,7 @@ class RouteQuery(BaseModel):
 
 # LLM with function call
 llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
-structured_llm_router = llm.with_structured_output(RouteQuery)
+structured_llm_router = llm.with_structured_output(RouteQuery, method="json_mode", strict=False)
 
 # Prompt
 system = """You are an expert at routing a user question to a vectorstore or web search.
@@ -557,15 +557,20 @@ def ragDecision(state):
 
     question = state["question"]
 
-    source = question_router.invoke(
-        {
-            "question": question
-        }
-    )
-
-    print(f"source : >>>>>>> ", source)
-
-    return {"vectorDecision": source.datasource, "question": question}
+    try:
+        source = question_router.invoke(
+            {
+                "question": question
+            }
+        )
+        print(f"source : >>>>>>> ", source)
+        return {"vectorDecision": source.datasource, "question": question}
+    except Exception as e:
+        print(f"Error in ragDecision: {e}")
+        # Default to issue_sop_vectorstore for issue type, otherwise vectorstore
+        default_source = "issue_sop_vectorstore" if state.get("type") == "issue" else "vectorstore"
+        print(f"Using default source: {default_source}")
+        return {"vectorDecision": default_source, "question": question}
 
 
 ## Edges ##
