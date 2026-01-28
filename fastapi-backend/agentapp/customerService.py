@@ -69,7 +69,7 @@ class IssueState(BaseModel):
 router = llm.with_structured_output(Route)
 
 ## 
-analyser_llm = llm.with_structured_output(IssueState)
+analyser_llm = llm.with_structured_output(IssueState, method="json_mode", strict=False)
 
 class GraphState(TypedDict):
     """

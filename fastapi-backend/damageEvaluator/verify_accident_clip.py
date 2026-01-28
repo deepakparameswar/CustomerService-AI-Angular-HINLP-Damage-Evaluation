@@ -37,9 +37,8 @@ def verify_claim_clip(image_path, claim_description):
         
         candidate_labels = [
             f"a photo of {claim_description}",
-            "a photo of an undamaged car",
-            "a photo of a car with different damage",
-            "a photo of a random scene"
+            f"a photo of different damage no relation with current issue: {claim_description} ",
+            "a photo of an undamaged vehicle(no stuctural damage, no windows damages, no crash damages)"
         ]
         
         inputs = processor(text=candidate_labels, images=image, return_tensors="pt", padding=True)
@@ -54,8 +53,11 @@ def verify_claim_clip(image_path, claim_description):
 
         # Determine the best match
         best_match_idx = probs.argmax().item()
+        print(f"Best match index: {best_match_idx}")
         best_match_label = candidate_labels[best_match_idx]
+        print(f"Best match label: {best_match_label}")
         confidence = probs[0][best_match_idx].item()
+        print(f"Confidence: {confidence:.4f}")
 
         result = f"Best match: '{best_match_label}' with confidence {confidence:.2f}"
         print(f"result >>>>>>>>>>>>>>>> {result}")        
