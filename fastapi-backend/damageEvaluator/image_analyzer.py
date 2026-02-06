@@ -85,11 +85,23 @@ def analyze_image(session_id: str, images: list, description: str):
                 
                 # Look up probable damages in SOP
                 probable_damages = damage_sop.get(label, [])
+                
+                # Fallback: check for keywords if exact match not found
+                if not probable_damages:
+                    for key in ["dent", "scratch", "crack", "broken glass", "missing part"]:
+                        if key in label:
+                            probable_damages.extend(damage_sop.get(key, []))
+                    
+                    # Remove duplicates if any
+                    probable_damages = list(set(probable_damages))
                 print(f"probable_damages for '{label}': >>>>>>>> ", probable_damages)
                 probable_info = ""
                 if probable_damages:
                     probable_info = f"\n  -> Probable Hidden/Associated Damages: {', '.join(probable_damages)}"
                 
+                # Add probable damages to the structured output
+                d['probable_damages'] = probable_damages
+
                 print(f"probable_info: >>>>>>>> ", probable_info)
 
                 damage_summary_lines.append(f"- {d['label']} ({d['severity']}, Confidence: {d['confidence']:.2f}){probable_info}")
@@ -102,7 +114,8 @@ def analyze_image(session_id: str, images: list, description: str):
             "You are an AI insurance adjuster. Your job is to compare the visual evidence "
             "from a car accident photo with the driver's claim description.\n"
             "Analyze if the detected damage supports the claim.\n"
-            "Be objective and concise. Start with 'MATCH', 'MISMATCH', or 'INCONCLUSIVE'."
+            "Be objective. Start with 'MATCH', 'MISMATCH', 'PARTIAL MATCH', or 'INCONCLUSIVE'.\n"
+            "CRITICAL: Use 'PARTIAL MATCH' if the evidence supports ANY part of the claim (e.g. valid door damage) even if other parts (e.g. windows) are not visible. Do NOT use MISMATCH if there is substantial overlap."
         )
 
         user_content = (
