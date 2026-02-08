@@ -23,6 +23,7 @@ import uuid
 
 from damageEvaluator.image_analyzer import analyze_image
 from damageEvaluator.verify_accident_clip import verify_claim_clip
+from agentapp.voice_service import transcribe_audio, translate_audio
 
 # Load environment variables from the .env file in the same directory as this script
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -65,6 +66,7 @@ Action: Choose one action (tool) to execute next — must be one of [{tool_names
 
 userID: {userID}
 imageURL: {imageURL}
+audioURL: {audioURL}
 issueDescription: {description}                                      
 previous tool response: {toolRes}                                            
 
@@ -88,6 +90,7 @@ class GraphState(TypedDict):
    userID: str
    issueDescription: str
    imageURL: Optional[List[str]]
+   audioURL: Optional[str]
 
 groq_api_key = os.getenv("GROQ_API_KEY")
 if groq_api_key:
@@ -170,6 +173,36 @@ def updateUserdetails(user_id: str) -> dict:
 
 
 @tool
+def processVoiceClaim(user_id: str, audioURL: str) -> dict:
+    """Process an accident claim voice note and return a transcript."""
+    if not audioURL:
+        return {
+            "user_id": user_id,
+            "status": "ERROR",
+            "error": "No audio URL provided"
+        }
+    try:
+        transcript, detected_language = transcribe_audio(audioURL, language=None)
+        translation_en = translate_audio(audioURL)
+
+        return {
+            "user_id": user_id,
+            "audioURL": audioURL,
+            "status": "SUCCESS",
+            "language": detected_language,
+            "transcript": transcript,
+            "translation_en": translation_en
+        }
+    except Exception as e:
+        return {
+            "user_id": user_id,
+            "audioURL": audioURL,
+            "status": "ERROR",
+            "error": str(e)
+        }
+
+
+@tool
 def evaluateImageWithDescription(user_id: str, imageURL: str, description: str) -> dict:
     """evaluate the vehicle image with description to check the image and description are matching"""
 
@@ -247,7 +280,8 @@ tools = [
     check_bank_statement,
     updateUserdetails,
     estimateVehicleDamage,
-    evaluateImageWithDescription
+    evaluateImageWithDescription,
+    processVoiceClaim
 ]
 
 llm_with_tools = llm.bind_tools(tools)
@@ -264,6 +298,7 @@ def assistant(state: GraphState):
         userID= state["userID"],
         description = state.get("issueDescription", ""),
         imageURL= state.get("imageURL", ""),
+        audioURL= state.get("audioURL", ""),
         toolRes= state.get("toolRes", [])
     )
 

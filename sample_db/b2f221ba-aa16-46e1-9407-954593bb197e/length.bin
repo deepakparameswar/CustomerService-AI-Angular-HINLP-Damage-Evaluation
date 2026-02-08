@@ -1,0 +1,9 @@
+4:  Car windows and side doors damages on accident, Please help to calculate 
+accident vehicle damage estimation 
+ 
+Steps to follow: 
+1. Call /evaluateImageWithDescription/{userID}/{imageUrl}/{description} if 
+image is match with description match description then proceed with step 2 
+else end the process. 
+2. Call /estimateVehicleDamage/{userID}/{imageUrl} API with proper userID and 
+imageUrl.ÿÿÿ

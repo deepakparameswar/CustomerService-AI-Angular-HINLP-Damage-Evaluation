@@ -1,0 +1,5 @@
+ISSUE 5: Accident claim reported with voice note (no image provided)
+Steps to follow:
+1. Call /processVoiceClaim/{userID}/{audioURL} to transcribe the caller's voice note.
+2. Use the transcript to confirm the accident description.
+3. If transcript confirms the accident, create a support ticket using /create_support_ticket/{userID},{issueDescription}.

@@ -38,3 +38,7 @@ zstandard==0.25.0
 Pillow>=9.0.0
 ultralytics==8.3.176
 ultralytics-thop==2.0.15
+
+# speech-to-text
+faster-whisper>=1.0.0
+python-multipart>=0.0.6

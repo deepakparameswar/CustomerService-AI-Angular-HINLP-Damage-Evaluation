@@ -1,6 +1,6 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Issue } from '../../models/issue.model';
 import { IssueService } from '../../services/issue.service';
@@ -25,7 +25,7 @@ import { IssueService } from '../../services/issue.service';
               </thead>
               <tbody>
                 <ng-container *ngFor="let issue of issues">
-                  <tr>
+                  <tr [class.new-case]="isNewCase(issue)">
                     <td>{{ issue.userID }}</td>
                     <td>{{ issue.userName }}</td>
                     <td>{{ issue.issueDescription }}</td>
@@ -147,6 +147,11 @@ import { IssueService } from '../../services/issue.service';
     
     .issues-table tr:hover {
       background: #f8f9fa;
+    }
+
+    .issues-table tr.new-case {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
     }
     
     .action-btn {
@@ -357,14 +362,38 @@ export class DashboardComponent implements OnInit {
   expandedRows: Set<string> = new Set();
   popupImageUrl: string | null = null;
   resolvingIssues: Set<string> = new Set();
+  newCaseId: string | null = null;
 
-  constructor(private issueService: IssueService, private router: Router, private http: HttpClient) {}
+  constructor(private issueService: IssueService, private router: Router, private http: HttpClient, private route: ActivatedRoute) { }
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      this.newCaseId = params['newCaseId'] || null;
+      this.loadIssues();
+    });
+  }
+
+  private loadIssues(): void {
     this.issueService.getIssues().subscribe({
-      next: (data) => this.issues = data,
+      next: (data) => {
+        const storedCases = this.getStoredCases();
+        this.issues = [...storedCases, ...data];
+      },
       error: (error) => console.error('Error fetching issues:', error)
     });
+  }
+
+  private getStoredCases(): Issue[] {
+    try {
+      const raw = localStorage.getItem('createdCases');
+      return raw ? (JSON.parse(raw) as Issue[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  isNewCase(issue: Issue): boolean {
+    return !!this.newCaseId && issue.caseId === this.newCaseId;
   }
 
   viewIssue(issue: Issue): void {
@@ -390,7 +419,8 @@ export class DashboardComponent implements OnInit {
             issueDescription: issue.issueDescription,
             response: JSON.stringify(response),
             threadID: issue.threadID,
-            imageURL: issue?.imageURL
+            imageURL: issue?.imageURL,
+            audioURL: issue?.audioURL
           }
         });
       },

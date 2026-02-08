@@ -39,6 +39,23 @@ class InsuranceIssueSOPVectorStore:
                             metadata={"issue_id": issue_id_line, "category": "life_issue_sop"}
                         )
                     )
+
+        additions_path = os.path.join(os.path.dirname(__file__), "Insurance_issue_sop_additions.txt")
+        if os.path.exists(additions_path):
+            with open(additions_path, "r", encoding="utf-8") as f:
+                additions_text = f.read()
+
+            additions_blocks = additions_text.split("ISSUE")
+            for block in additions_blocks:
+                if block.strip():
+                    issue_id_line = block.split(":")[0].strip()
+                    content = block.strip()
+                    structured_docs.append(
+                        Document(
+                            page_content=content,
+                            metadata={"issue_id": issue_id_line, "category": "life_issue_sop"}
+                        )
+                    )
         return structured_docs
 
     def split_chunks(self, documents):
@@ -55,13 +72,16 @@ class InsuranceIssueSOPVectorStore:
         structured_docs = self.load_documents()
         chunks = self.split_chunks(structured_docs)
 
-        # Check if docs already exist
+        # Add only new chunks to avoid duplicates
         existing_docs = self.vectorstore._collection.get(where={"category": "life_issue_sop"})
-        if not existing_docs['ids']:
-            self.vectorstore.add_documents(chunks)
-            print(f"[SUCCESS] Added {len(chunks)} new chunks to vectorstore.")
+        existing_texts = set(existing_docs.get("documents") or [])
+        new_chunks = [chunk for chunk in chunks if chunk.page_content not in existing_texts]
+
+        if new_chunks:
+            self.vectorstore.add_documents(new_chunks)
+            print(f"[SUCCESS] Added {len(new_chunks)} new chunks to vectorstore.")
         else:
-            print("[INFO] Vectorstore already has documents, skipping add.")
+            print("[INFO] No new SOP chunks to add.")
 
     def debug_existing(self):
         """Print existing docs in vectorstore for debugging."""

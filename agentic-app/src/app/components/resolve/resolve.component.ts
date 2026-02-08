@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Issue } from '../../models/issue.model';
-import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscore.pipe'
+import { TitleCaseFromUnderscorePipe } from '../../pipes/title-case-from-underscore.pipe'
 
 @Component({
   selector: 'app-resolve',
@@ -21,6 +21,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                 <p>Party Name: {{ selectedIssue?.userName || 'N/A' }}</p>
                 <p>Issue Description: {{ selectedIssue?.issueDescription || 'N/A' }}</p>
                 <p>Status: In Progress</p>
+                <p *ngIf="translatedDescription"><strong>Translated Description:</strong> {{ translatedDescription }}</p>
               </div>
             </div>
           </div>
@@ -41,6 +42,29 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                       </div>
                     </div>
                     <div class="start-controls">
+                      <div class="voice-tools" *ngIf="selectedIssue?.audioURL">
+                        <p class="workflow-description">Audio detected. You can transcribe or translate before execution.</p>
+                        <div class="audio-preview">
+                          <audio class="audio-player" [src]="selectedIssue?.audioURL" controls></audio>
+                        </div>
+                        <div class="voice-actions">
+                          <button class="btn-secondary" (click)="transcribeAudio()" [disabled]="isTranscribing">
+                            <span *ngIf="!isTranscribing">📝 Transcribe</span>
+                            <span *ngIf="isTranscribing">⏳ Transcribing...</span>
+                          </button>
+                          <button class="btn-secondary" (click)="translateAudio()" [disabled]="isTranslating">
+                            <span *ngIf="!isTranslating">🌐 Translate to English</span>
+                            <span *ngIf="isTranslating">⏳ Translating...</span>
+                          </button>
+                          <button class="btn-secondary" (click)="regenerateSopWithTranslation()" [disabled]="!translatedDescription">
+                            🔁 Regenerate SOP with Translation
+                          </button>
+                        </div>
+                        <div class="voice-results" *ngIf="transcript || translatedDescription">
+                          <p *ngIf="transcript"><strong>Transcript:</strong> {{ transcript }}</p>
+                          <p *ngIf="translatedDescription"><strong>English Translation:</strong> {{ translatedDescription }}</p>
+                        </div>
+                      </div>
                       <p class="workflow-description">Ready to execute Standard Operating Procedure for issue resolution.</p>
                       <button class="btn-start" (click)="startExecution()" [disabled]="isExecuting">
                         <span *ngIf="!isExecuting">▶ Start Execution</span>
@@ -50,7 +74,7 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                   </div>
                 </div>
                 
-                <div class="execution-content" *ngIf="apiResponse">
+                <div class="execution-content" *ngIf="apiResponse && !caseCreated">
                 <div class="workflow-status">
                   <div class="status-badge executing"><span class="blinking-dot">●</span> Executing SOP</div>
                   <span class="workflow-id">Workflow ID: WF-2024-001</span>
@@ -192,6 +216,48 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
                   <button class="btn-danger">✗ Reject Workflow</button>
                   <button class="btn-warning">⏸ Pause Execution</button>
                 </div>
+                </div>
+              </div>
+            </div>
+            <div class="card" *ngIf="caseCreated">
+              <h3>Case Creation</h3>
+              <div class="card-content">
+                <div class="case-form">
+                  <div class="case-row">
+                    <label>Case ID</label>
+                    <input type="text" [value]="caseSummary?.id" disabled />
+                  </div>
+                  <div class="case-row">
+                    <label>Created At</label>
+                    <input type="text" [value]="caseSummary?.createdAt" disabled />
+                  </div>
+                  <div class="case-row">
+                    <label>Party Number</label>
+                    <input type="text" [value]="selectedIssue?.userID" disabled />
+                  </div>
+                  <div class="case-row">
+                    <label>Party Name</label>
+                    <input type="text" [value]="selectedIssue?.userName" disabled />
+                  </div>
+                  <div class="case-row">
+                    <label>Issue Title</label>
+                    <input type="text" [value]="selectedIssue?.issueTitle" disabled />
+                  </div>
+                  <div class="case-row">
+                    <label>Transcribed Details</label>
+                    <textarea rows="4" [value]="transcript || translatedDescription || selectedIssue?.issueDescription || ''" disabled></textarea>
+                  </div>
+                  <div class="case-row">
+                    <label>Audio URL</label>
+                    <input type="text" [value]="selectedIssue?.audioURL" disabled />
+                  </div>
+                  <div class="case-actions">
+                    <button class="btn-success" (click)="createCase()" [disabled]="caseCreateSuccess">✓ Create Case</button>
+                    <button class="btn-secondary" disabled>✎ Edit Details</button>
+                  </div>
+                  <div class="case-success" *ngIf="caseCreateSuccess">
+                    ✅ Case has been created successfully.
+                  </div>
                 </div>
               </div>
             </div>
@@ -735,6 +801,119 @@ import {TitleCaseFromUnderscorePipe} from '../../pipes/title-case-from-underscor
       opacity: 0.6;
       transform: none;
     }
+
+    .btn-secondary {
+      background: #6f42c1;
+      color: white;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(111,66,193,0.2);
+    }
+
+    .btn-secondary:hover {
+      background: #59359b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(111,66,193,0.3);
+    }
+
+    .btn-secondary:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+
+    .voice-tools {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: #f3f0ff;
+      border: 1px solid #e1d8ff;
+      border-radius: 8px;
+    }
+
+    .voice-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.5rem 0;
+    }
+
+    .voice-results {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #333;
+    }
+
+    .audio-preview {
+      margin-bottom: 0.75rem;
+    }
+
+    .audio-player {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .case-created {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: #e9f7ef;
+      border: 1px solid #b7ebc6;
+      border-radius: 8px;
+    }
+
+    .case-details p {
+      margin: 0.25rem 0;
+      font-size: 0.9rem;
+      color: #1b4332;
+    }
+
+    .case-form {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .case-row {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .case-row label {
+      font-weight: 600;
+      color: #2b2d42;
+      font-size: 0.9rem;
+    }
+
+    .case-row input,
+    .case-row textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #e1e5ea;
+      border-radius: 6px;
+      background: #f8f9fa;
+      color: #495057;
+      font-size: 0.9rem;
+    }
+
+    .case-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .case-success {
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
     
     .execution-content {
       animation: fadeIn 0.3s ease-in;
@@ -933,12 +1112,19 @@ export class ResolveComponent implements OnInit {
   selectedIssue: Issue | null = null;
   apiResponse: any = null;
   response: any = null;
-  sopMap:Map<string, [any]> = new Map<string, [any]>();
+  sopMap: Map<string, [any]> = new Map<string, [any]>();
   isExecuting: boolean = false;
+  isTranscribing: boolean = false;
+  isTranslating: boolean = false;
   popupImageUrl: string | null = null;
   response_metadata: any = null;
+  transcript: string | null = null;
+  translatedDescription: string | null = null;
+  caseCreated: boolean = false;
+  caseSummary: { id: string; createdAt: string; description: string } | null = null;
+  caseCreateSuccess: boolean = false;
 
-  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) {}
+  constructor(private http: HttpClient, private router: Router, private route: ActivatedRoute) { }
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
@@ -949,8 +1135,12 @@ export class ResolveComponent implements OnInit {
           issueTitle: params['issueTitle'],
           issueDescription: params['issueDescription'],
           threadID: params['threadID'],
-          imageURL: params['imageURL']
+          imageURL: params['imageURL'],
+          audioURL: params['audioURL']
         };
+        this.caseCreated = false;
+        this.caseSummary = null;
+        this.caseCreateSuccess = false;
         if (params['response']) {
           this.response = JSON.parse(params['response']);
           console.log('Parsed response:', this.response);
@@ -967,12 +1157,21 @@ export class ResolveComponent implements OnInit {
 
     let threadID = this.selectedIssue.threadID;
     this.isExecuting = true;
-    
+    this.caseCreated = true;
+    this.caseCreateSuccess = false;
+    const description = this.translatedDescription || this.transcript || this.selectedIssue?.issueDescription || 'N/A';
+    this.caseSummary = {
+      id: `CASE-${Math.floor(Math.random() * 900000 + 100000)}`,
+      createdAt: new Date().toLocaleString(),
+      description: description
+    };
+
     this.http.post('http://localhost:8000/process-sopquery', {
       operating_procedure: this.response.response.generation,
       userID: this.selectedIssue.userID,
       imageURL: this.selectedIssue?.imageURL,
-      description: this.selectedIssue?.issueDescription,
+      audioURL: this.selectedIssue?.audioURL,
+      description: description,
       threadID: threadID
     }).subscribe({
       next: (response: any) => {
@@ -992,7 +1191,105 @@ export class ResolveComponent implements OnInit {
     });
   }
 
-  actionStep(entry:any, action: boolean): void {
+  createCase(): void {
+    if (!this.caseCreated || !this.caseSummary) {
+      return;
+    }
+    this.caseCreateSuccess = true;
+
+    const newCase: Issue = {
+      userID: this.selectedIssue?.userID || "N/A",
+      userName: this.selectedIssue?.userName || "N/A",
+      issueTitle: this.selectedIssue?.issueTitle || "Audio Claim",
+      issueDescription: this.caseSummary.description,
+      threadID: this.caseSummary.id,
+      imageURL: this.selectedIssue?.imageURL,
+      audioURL: this.selectedIssue?.audioURL,
+      caseId: this.caseSummary.id
+    };
+
+    const storedCases = this.getStoredCases();
+    const exists = storedCases.some(item => item.caseId === newCase.caseId);
+    if (!exists) {
+      storedCases.unshift(newCase);
+      localStorage.setItem("createdCases", JSON.stringify(storedCases));
+    }
+
+    this.router.navigate(["/dashboard"], {
+      queryParams: { newCaseId: this.caseSummary.id }
+    });
+  }
+
+  private getStoredCases(): Issue[] {
+    try {
+      const raw = localStorage.getItem("createdCases");
+      return raw ? (JSON.parse(raw) as Issue[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  transcribeAudio(): void {
+    if (!this.selectedIssue?.audioURL) {
+      console.error('No audio URL provided');
+      return;
+    }
+
+    this.isTranscribing = true;
+    this.http.post('http://localhost:8000/voice/transcribe', {
+      audioURL: this.selectedIssue.audioURL
+    }).subscribe({
+      next: (response: any) => {
+        this.isTranscribing = false;
+        this.transcript = response.transcript || null;
+      },
+      error: (error) => {
+        this.isTranscribing = false;
+        console.error('Transcription Error:', error);
+      }
+    });
+  }
+
+  translateAudio(): void {
+    if (!this.selectedIssue?.audioURL) {
+      console.error('No audio URL provided');
+      return;
+    }
+
+    this.isTranslating = true;
+    this.http.post('http://localhost:8000/voice/translate', {
+      audioURL: this.selectedIssue.audioURL
+    }).subscribe({
+      next: (response: any) => {
+        this.isTranslating = false;
+        this.translatedDescription = response.translation_en || null;
+      },
+      error: (error) => {
+        this.isTranslating = false;
+        console.error('Translation Error:', error);
+      }
+    });
+  }
+
+  regenerateSopWithTranslation(): void {
+    if (!this.translatedDescription) {
+      return;
+    }
+
+    this.http.post('http://localhost:8000/start-execution', {
+      issueDescription: this.translatedDescription
+    }).subscribe({
+      next: (response: any) => {
+        this.response = response;
+        console.log('Regenerated SOP response:', this.response);
+      },
+      error: (error) => {
+        console.error('Regenerate SOP Error:', error);
+      }
+    });
+  }
+
+  actionStep(entry: any, action: boolean): void {
     if (!this.selectedIssue) {
       console.error('No issue selected');
       return;
@@ -1008,7 +1305,7 @@ export class ResolveComponent implements OnInit {
     console.log(`executionId ${threadID}`);
     console.log(`entry: ${entry}`)
 
-    if(entry) {
+    if (entry) {
       entry.status = 'waiting';
     }
     let body = {
@@ -1021,7 +1318,7 @@ export class ResolveComponent implements OnInit {
         this.apiResponse = response;
         entry.status = 'completed';
         entry["tool_res"] = this.apiResponse?.previous_tool_res
-        if(response.hasNextTool) {
+        if (response.hasNextTool) {
           this.apiResponse["status"] = "pending_approval";
           this.apiResponse["requires_approval"] = true;
           executionObjs?.push(this.apiResponse)
@@ -1036,11 +1333,11 @@ export class ResolveComponent implements OnInit {
     });
   }
 
-  getPendingActions():void {
+  getPendingActions(): void {
     this.http.get('http://localhost:8000/executions/pending').subscribe({
       next: (response: any) => {
         console.log('getPendingActions API Response:', response);
-        
+
       },
       error: (error) => {
         console.error('API Error:', error);
@@ -1049,7 +1346,7 @@ export class ResolveComponent implements OnInit {
   }
 
   getStatusLabel(status: string): string {
-    console.log("getStatusLabel status: >>>>> ",status)
+    console.log("getStatusLabel status: >>>>> ", status)
     switch (status) {
       case 'completed': return 'completed';
       case 'pending_approval': return 'pending';
@@ -1059,9 +1356,9 @@ export class ResolveComponent implements OnInit {
 
   getToolsDetails() {
     let items;
-    if(this.selectedIssue && this.selectedIssue.threadID) {
+    if (this.selectedIssue && this.selectedIssue.threadID) {
       items = this.sopMap.get(this.selectedIssue.threadID)
-      console.log("getToolsDetails items >>>>>> ",items)
+      console.log("getToolsDetails items >>>>>> ", items)
     }
     return items;
   }
@@ -1071,13 +1368,13 @@ export class ResolveComponent implements OnInit {
       try {
         const content = JSON.parse(this.apiResponse.previous_tool_res.content);
         if (content && content.result != "null") {
-          if(content.result?.analysis) {
+          if (content.result?.analysis) {
             return content.result.analysis
-            .filter((item: any) => item.annotated_output)
-            .map((item: any) => {
-              const imagePath = item.annotated_output.replace(/\\/g, '/');
-              return `http://localhost:8000/${imagePath}`;
-            });
+              .filter((item: any) => item.annotated_output)
+              .map((item: any) => {
+                const imagePath = item.annotated_output.replace(/\\/g, '/');
+                return `http://localhost:8000/${imagePath}`;
+              });
           }
         }
       } catch (e) {
@@ -1129,7 +1426,7 @@ export class ResolveComponent implements OnInit {
   getToolResult(index: number): string | null {
     const items = this.getToolsDetails();
     if (!items || index >= items.length) return null;
-    
+
     const entry = items[index];
     if (entry?.tool_res?.content && entry.tool_res.content.trim()) {
       try {
@@ -1138,7 +1435,7 @@ export class ResolveComponent implements OnInit {
         if (content?.result && content.result !== 'null' && content.result !== '') {
           return typeof content.result === 'string' ? content.result : JSON.stringify(content.result, null, 2);
         }
-        return  JSON.stringify(content);
+        return JSON.stringify(content);
       } catch (e) {
         return entry.tool_res.content;
       }
@@ -1161,7 +1458,7 @@ export class ResolveComponent implements OnInit {
   getToolImages(index: number): string[] {
     const items = this.getToolsDetails();
     if (!items || index >= items.length) return [];
-    
+
     const entry = items[index];
     if (entry?.tool_res?.content) {
       try {
@@ -1184,7 +1481,7 @@ export class ResolveComponent implements OnInit {
   getToolDamages(index: number): any[] {
     const items = this.getToolsDetails();
     if (!items || index >= items.length) return [];
-    
+
     const entry = items[index];
     if (entry?.tool_res?.content) {
       try {

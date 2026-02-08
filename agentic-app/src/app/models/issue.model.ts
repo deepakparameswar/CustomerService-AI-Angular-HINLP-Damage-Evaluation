@@ -5,4 +5,6 @@ export interface Issue {
   issueTitle: string;
   threadID: string;
   imageURL?: string;
+  audioURL?: string;
+  caseId?: string;
 }

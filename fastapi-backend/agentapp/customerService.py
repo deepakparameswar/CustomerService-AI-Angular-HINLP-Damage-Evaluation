@@ -123,7 +123,7 @@ def issue_analyser(state):
         Rules:
         1. Extract policyNumber if present, else set to null.
         2. Extract problem description if present, else set to null.
-        3. If both policyNumber and issueProblemDesc are not null, set validIssue = true, else set validIssue = false.
+        3. If issueProblemDesc is not null, set validIssue = true, else set validIssue = false.
         4. missingProperties must ALWAYS include the names of all keys where the value is null.
         - If policyNumber = null, then add "policyNumber" to missingProperties.
         - If issueProblemDesc = null, then add "issueProblemDesc" to missingProperties.
@@ -190,7 +190,10 @@ structured_llm_router = llm.with_structured_output(RouteQuery, method="json_mode
 system = """You are an expert at routing a user question to a vectorstore or web search.
             The vectorstore contains documents related to LIC FAQs.
             The issue_sop_vectorstore contains documents related to User issues like payment failure or name change or some support queries.
-            Use the vectorstore for questions on the topics. Otherwise, use web-search."""
+            Use the vectorstore for questions on the topics. Otherwise, use web-search.
+            Respond only with valid JSON using this exact schema:
+            {{"datasource": "vectorstore"|"web_search"|"issue_sop_vectorstore"}}
+            The output must be a single JSON object and include the key "datasource"."""
 
 
 route_prompt = ChatPromptTemplate.from_messages(
@@ -414,6 +417,42 @@ def retrieve(state):
         store = issue_sop_vectorstore
         filter = {"category": "life_issue_sop"}
         question = state["issueProblemDesc"]
+
+        # Prefer the voice-note SOP when the question indicates audio/voice
+        if isinstance(question, str) and ("voice" in question.lower() or "audio" in question.lower()):
+            filter = {"issue_id": "5"}
+
+            # Try direct metadata lookup to avoid empty similarity results
+            try:
+                voice_docs = store._collection.get(where={"issue_id": "5"})
+                voice_texts = voice_docs.get("documents") if voice_docs else None
+                voice_metas = voice_docs.get("metadatas") if voice_docs else None
+                if voice_texts:
+                    documents = [
+                        Document(page_content=text, metadata=meta or {"issue_id": "5", "category": "life_issue_sop"})
+                        for text, meta in zip(voice_texts, voice_metas or [{}])
+                    ]
+                    print(f"docs: {documents}")
+                    return {"documents": documents, "question": question}
+            except Exception as e:
+                print(f"voice SOP lookup failed: {e}")
+
+            # Fallback to local additions file if vectorstore is empty
+            additions_path = os.path.join(os.path.dirname(__file__), "Insurance_issue_sop_additions.txt")
+            if os.path.exists(additions_path):
+                try:
+                    with open(additions_path, "r", encoding="utf-8") as f:
+                        additions_text = f.read()
+                    for block in additions_text.split("ISSUE"):
+                        if block.strip().startswith("5"):
+                            content = block.strip()
+                            documents = [
+                                Document(page_content=content, metadata={"issue_id": "5", "category": "life_issue_sop"})
+                            ]
+                            print(f"docs: {documents}")
+                            return {"documents": documents, "question": question}
+                except Exception as e:
+                    print(f"voice SOP file fallback failed: {e}")
 
     ## context
     documents = store.similarity_search(
@@ -704,7 +743,7 @@ def taskcreation_condition(state):
     print("---ROUTE TASK CREATION---")
 
     if state["validIssue"] == True:
-        if state["policyNumber"] != None and state["issueProblemDesc"] != None:
+        if state["issueProblemDesc"] != None:
             print("---VALID ISSUE TO CALL TOOL---")
             return "rag_route"
     else:

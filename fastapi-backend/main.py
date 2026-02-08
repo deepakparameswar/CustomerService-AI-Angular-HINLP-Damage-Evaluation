@@ -7,6 +7,7 @@ import os
 from agentapp.customerService import build_graph
 
 from agentapp.toolExecutionService import build_sopGraph
+from agentapp.voice_service import transcribe_audio, translate_audio
 
 graph = build_graph()
 sopGraph = build_sopGraph()
@@ -15,6 +16,7 @@ app = FastAPI()
 # Mount static files
 app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
+app.mount("/audio_uploads", StaticFiles(directory="audio_uploads"), name="audio_uploads")
 
 # Add CORS middleware
 app.add_middleware(
@@ -32,6 +34,7 @@ class Issue(BaseModel):
     issueTitle: str
     threadID: str
     imageURL: Optional[str] = None
+    audioURL: Optional[str] = None
 
 class LoginRequest(BaseModel):
     username: str
@@ -50,7 +53,13 @@ class sopQuery(BaseModel):
     userID: str
     threadID: str
     imageURL: Optional[str] = None
+    audioURL: Optional[str] = None
     description: Optional[str] = None
+
+
+class VoiceRequest(BaseModel):
+    audioURL: str
+    language: Optional[str] = None
 
 
 payment_status_data = [
@@ -76,6 +85,7 @@ issues_data = [
     {"userID": "U002", "userName": "Jane Smith", "issueDescription": "Need some correction for second name from policy 12324", "issueTitle": "Update Second Name", "threadID": "cfb8dcf3-3f2f-4a47-bef5-3cfbc495fc1b"},
     {"userID": "U003", "userName": "Mike Johnson", "issueDescription": "Data export functionality broken", "issueTitle": "Export Bug", "threadID": "d4a93904-99df-4b20-9b34-06a01391c5a5"},
     {"userID": "U004", "userName": "Sarah Wilson", "issueDescription": "Car windows and side doors damages on accident, Please help to calculate accident vehicle damage estimation for policy number 671289", "issueTitle": "Car Damage Estimation", "threadID": "1de03fa9-96a1-4988-9989-54b8dcd4a9f1", "imageURL": "http://localhost:8000/images/accident-damage-car.jpg"},
+    {"userID": "U051", "userName": "Priya Mehta", "issueDescription": "Accident claim reported via voice note: rear-end collision on highway near exit 12. Vehicle bumper and tail light damaged, no injuries.", "issueTitle": "Accident Claim Intake", "threadID": "b36f7e1b-1df0-4b54-9c2c-3a8c1c8a7b11", "audioURL": "http://localhost:8000/audio_uploads/priya.mp3"},
     {"userID": "U005", "userName": "David Brown", "issueDescription": "Page loading very slowly", "issueTitle": "Performance Issue", "threadID": "4a33b890-3028-4204-8f42-1dc469ccf214"},
     {"userID": "U006", "userName": "Lisa Garcia", "issueDescription": "Cannot upload files", "issueTitle": "Upload Error", "threadID": "2ff2a7e7-6f05-4a6b-b406-d5a99f6d7f7d"},
     {"userID": "U007", "userName": "Robert Taylor", "issueDescription": "Search function returns no results", "issueTitle": "Search Bug", "threadID": "db44e64d-cb41-42a4-8b64-982046f06e8a"},
@@ -182,7 +192,7 @@ async def process_sopquery(request: sopQuery):
     print(f"SOP Execution started for sop: {request.operating_procedure}")
 
     thread = {"configurable": {"thread_id": request.threadID}}
-    query = {"operating_procedure": request.operating_procedure, "userID": request.userID, "imageURL": request.imageURL, "issueDescription":request.description}
+    query = {"operating_procedure": request.operating_procedure, "userID": request.userID, "imageURL": request.imageURL, "audioURL": request.audioURL, "issueDescription":request.description}
 
     response = sopGraph.invoke(query, thread)
 
@@ -224,6 +234,25 @@ async def start_execution(request: StartExecutionRequest):
     response = graph.invoke({"question": request.issueDescription}, config=config)
     print(f"SOP graph invocation response: {response}")
     return {"status": "success", "message": "SOP execution started", "response": response}
+
+
+@app.post("/voice/transcribe")
+async def voice_transcribe(request: VoiceRequest):
+    transcript, detected_language = transcribe_audio(request.audioURL, request.language)
+    return {
+        "status": "success",
+        "transcript": transcript,
+        "language": detected_language
+    }
+
+
+@app.post("/voice/translate")
+async def voice_translate(request: VoiceRequest):
+    translation_en = translate_audio(request.audioURL)
+    return {
+        "status": "success",
+        "translation_en": translation_en
+    }
 
 @app.get("/getPaymentStatus/{userID}")
 async def get_payment_status(userID: str):
