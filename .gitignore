@@ -1,0 +1,6 @@
+# Secrets
+.env
+.env.*
+!.env.example
+fastapi-backend/agentapp/.env
+agentic-app/.env
